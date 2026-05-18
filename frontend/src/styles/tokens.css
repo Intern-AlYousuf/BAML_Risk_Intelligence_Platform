@@ -1,0 +1,102 @@
+/* =============================================================================
+   BAML Risk Intelligence Platform — Design Tokens v2
+   Pure CSS custom properties — no Tailwind dependency.
+   Imported by app/globals.css before the @theme block.
+   ============================================================================= */
+
+:root {
+
+  /* ---------------------------------------------------------------------------
+     SURFACES
+     --------------------------------------------------------------------------- */
+  --bg-page:    #0B0B0C;   /* main page background                    */
+  --bg-panel:   #111318;   /* sidebar + topbar chrome                 */
+  --bg-card:    #15171C;   /* card / panel surface                    */
+  --bg-surface: #1C1F24;   /* hover state / overlay / inset           */
+
+  /* ---------------------------------------------------------------------------
+     BORDERS
+     --------------------------------------------------------------------------- */
+  --border:        rgba(255, 255, 255, 0.06);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-strong: rgba(255, 255, 255, 0.10);
+
+  /* ---------------------------------------------------------------------------
+     ACCENT — YELLOW
+     --------------------------------------------------------------------------- */
+  --accent:       #F5D90A;
+  --accent-dim:   rgba(245, 217, 10, 0.10);
+  --accent-glow:  rgba(245, 217, 10, 0.06);
+  --accent-muted: #A89208;
+  --accent-text:  #E8CC08;    /* slightly softer for large text */
+
+  /* ---------------------------------------------------------------------------
+     TEXT
+     --------------------------------------------------------------------------- */
+  --text-1: #F5F7FA;   /* primary                                     */
+  --text-2: #A1A8B3;   /* secondary                                   */
+  --text-3: #6B7280;   /* muted / placeholder                         */
+  --text-4: #374151;   /* disabled                                    */
+
+  /* ---------------------------------------------------------------------------
+     STATUS
+     --------------------------------------------------------------------------- */
+  --green:     #22C55E;
+  --green-dim: rgba(34,  197, 94,  0.10);
+  --red:       #EF4444;
+  --red-dim:   rgba(239, 68,  68,  0.10);
+  --amber:     #F59E0B;
+  --amber-dim: rgba(245, 158, 11,  0.10);
+  --blue:      #3B82F6;
+  --blue-dim:  rgba(59,  130, 246, 0.10);
+
+  /* ---------------------------------------------------------------------------
+     LAYOUT
+     --------------------------------------------------------------------------- */
+  --sidebar-w:   260px;
+  --topbar-h:    64px;
+  --page-pad-x:  2.5rem;    /* 40px horizontal page gutter            */
+  --page-pad-y:  2.5rem;    /* 40px vertical page gutter              */
+  --section-gap: 2rem;      /* 32px between page sections             */
+  --card-gap:    1.25rem;   /* 20px between cards (spec requirement)  */
+  --card-pad:    2rem;      /* 32px inner card padding                */
+
+  /* ---------------------------------------------------------------------------
+     RADIUS
+     --------------------------------------------------------------------------- */
+  --r-xs:   4px;
+  --r-sm:   6px;
+  --r-md:   10px;
+  --r-lg:   14px;
+  --r-card: 20px;      /* spec: 20px card corners                    */
+  --r-full: 9999px;
+
+  /* ---------------------------------------------------------------------------
+     TYPE SCALE
+     spec: page titles 36px · section titles 18px · KPI 48–56px · labels 14–16px
+     --------------------------------------------------------------------------- */
+  --text-xs:   0.75rem;    /*  12px */
+  --text-sm:   0.875rem;   /*  14px — labels (spec: 14–16px)          */
+  --text-base: 1rem;       /*  16px — labels + body                   */
+  --text-lg:   1.125rem;   /*  18px — section titles (spec: 18px)     */
+  --text-xl:   1.375rem;   /*  22px — sub-section headings            */
+  --text-2xl:  2.25rem;    /*  36px — page titles (spec: 36px)        */
+  --text-kpi:  3rem;       /*  48px — KPI display values (spec: 48px) */
+  --text-hero: 3.5rem;     /*  56px — hero KPI (spec: 56px)           */
+
+  /* ---------------------------------------------------------------------------
+     SHADOWS
+     --------------------------------------------------------------------------- */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-lg:   0 4px 32px rgba(0, 0, 0, 0.5);
+  --shadow-xl:   0 8px 48px rgba(0, 0, 0, 0.65);
+
+  /* ---------------------------------------------------------------------------
+     ANIMATION
+     --------------------------------------------------------------------------- */
+  --ease:        cubic-bezier(0.2, 0, 0, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  --dur-fast:    120ms;
+  --dur-base:    180ms;
+  --dur-slow:    300ms;
+}

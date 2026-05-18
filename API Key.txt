@@ -1,0 +1,1 @@
+API Key for the FRED website is: c06d538ef41d8ae751a870b428ef4ba7

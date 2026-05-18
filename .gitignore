@@ -1,0 +1,31 @@
+# ── Secrets & local config ────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Python / Backend ──────────────────────────────────────────────────────────
+backend/venv/
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/**/*.pyo
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/dist/
+backend/*.egg-info/
+backend/htmlcov/
+backend/.coverage
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+# .env.docker is committed (it's a template, no secrets)
+# .env.local is NOT committed
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

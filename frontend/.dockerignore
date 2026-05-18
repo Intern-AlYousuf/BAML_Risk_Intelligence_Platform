@@ -1,0 +1,24 @@
+# Build output — rebuilt inside Docker
+.next/
+out/
+
+# Dependencies — reinstalled inside Docker
+node_modules/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# VCS
+.git/
+.gitignore
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Docs
+*.md
+!README.md

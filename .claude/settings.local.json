@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\lione\\\\BAML_Risk_Intelligence_Platform\\\\backend\" -Force | Where-Object { -not $_.PSIsContainer } | Select-Object Name)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/sofr)",
+      "Bash(xargs grep -l \"forecast\\\\|arima\\\\|SOFR\\\\|timeseries\")",
+      "Bash(xargs grep -l \"sofr\\\\|SOFR\\\\|forecast\\\\|Forecast\")",
+      "Bash(xargs grep -l \"Chart\\\\|AreaChart\\\\|BarChart\")"
+    ]
+  }
+}

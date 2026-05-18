@@ -1,0 +1,66 @@
+# ══════════════════════════════════════════════════════════════════════════════
+#  docker-compose.override.yml — Development overrides
+#
+#  Applied automatically when you run `docker compose up`.
+#  Do NOT use these overrides for staging or production deployments.
+#
+#  What this adds over the base compose file:
+#    - Backend: source code mounted for hot-reload via uvicorn --reload
+#    - Frontend: source code mounted for Next.js dev server
+#    - DEBUG=true and verbose logging on both services
+#    - node_modules kept inside the container (anonymous volume trick)
+# ══════════════════════════════════════════════════════════════════════════════
+
+services:
+
+  # ── Backend dev: mount source + uvicorn hot-reload ─────────────────────────
+  backend:
+    build:
+      target: runtime          # still use the same runtime stage
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --reload
+      - --reload-dir
+      - /app/app
+    environment:
+      DEBUG:     "true"
+      LOG_LEVEL: DEBUG
+      LOG_JSON:  "false"
+    volumes:
+      # Mount source so code changes are reflected without rebuilding
+      - ./backend:/app
+      # Keep the venv inside the container (overrides the host mount above)
+      - backend_venv:/opt/venv
+
+  # ── Frontend dev: mount source + Next.js dev server ────────────────────────
+  frontend:
+    build:
+      target: builder           # reuse the builder stage (has dev deps)
+    command: npm run dev
+    environment:
+      NODE_ENV:    development
+      BACKEND_URL: http://backend:8000
+    volumes:
+      # Mount source so code changes are picked up immediately
+      - ./frontend:/app
+      # Keep node_modules inside the container — prevents host/container conflicts
+      - frontend_node_modules:/app/node_modules
+      # Keep .next build cache inside the container
+      - frontend_next_cache:/app/.next
+
+  # ── PostgreSQL: expose on standard port in dev ─────────────────────────────
+  db:
+    ports:
+      - "5432:5432"             # override the non-standard 5433 from base config
+
+
+# ── Named volumes for dev-only containers ─────────────────────────────────────
+volumes:
+  backend_venv:
+  frontend_node_modules:
+  frontend_next_cache:
