@@ -27,6 +27,8 @@ export interface DistributionChartProps {
   data:          DistributionPoint[];
   /** Inclusive range for the "base case" highlighted zone */
   baseRange?:    { low: number; high: number };
+  /** Label shown in the tooltip — e.g. "SOFR" or "NGN/USD" */
+  assetLabel?:   string;
   /** Chart area height in px */
   height?:       number;
   className?:    string;
@@ -37,11 +39,12 @@ export interface DistributionChartProps {
    --------------------------------------------------------------------------- */
 
 function DistributionTooltip({
-  active, payload, label,
+  active, payload, label, assetLabel = 'SOFR',
 }: {
-  active?:  boolean;
-  payload?: Array<{ value: number }>;
-  label?:   string;
+  active?:     boolean;
+  payload?:    Array<{ value: number }>;
+  label?:      string;
+  assetLabel?: string;
 }) {
   if (!active || !payload?.length) return null;
 
@@ -58,7 +61,7 @@ function DistributionTooltip({
     >
       <div className="px-4 pt-3.5 pb-3">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.15em] text-[#6B7280] mb-2.5 leading-none">
-          SOFR {label}%
+          {assetLabel} {label}
         </p>
         <p
           className="text-[18px] font-semibold leading-none"
@@ -79,6 +82,7 @@ function DistributionTooltip({
 export function DistributionChart({
   data,
   baseRange,
+  assetLabel,
   height    = 300,
   className,
 }: DistributionChartProps) {
@@ -127,7 +131,7 @@ export function DistributionChart({
             width={38}
           />
           <Tooltip
-            content={<DistributionTooltip />}
+            content={<DistributionTooltip assetLabel={assetLabel} />}
             cursor={{ fill: 'rgba(255,255,255,0.02)' }}
           />
           <Bar

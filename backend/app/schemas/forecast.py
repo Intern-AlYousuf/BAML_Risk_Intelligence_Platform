@@ -311,3 +311,73 @@ class SOFRMonteCarloParams(BaseModel):
     arima_d:         int | None = Field(None, ge=0, le=2)
     arima_q:         int | None = Field(None, ge=0, le=8)
     run_diagnostics: bool = Field(False, description="Include residual diagnostics in response")
+
+
+# ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ──
+#  FX MONTE CARLO RESPONSE
+#  Mirrors SOFRMonteCarloResponse field-for-field so the frontend can reuse
+#  useSofrForecast-style transform logic with minimal adaptation.
+# ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ──
+
+
+class FXMonteCarloSummarySchema(BaseModel):
+    """KPI-card values derived from the FX Monte Carlo ensemble.
+
+    Field names intentionally mirror ``MonteCarloSummarySchema`` so the same
+    frontend transform() function works for both SOFR and FX responses.
+    """
+    projected_rate:        float = Field(..., description="P50 terminal rate")
+    projected_rate_label:  str   = Field(..., description="Formatted for display, e.g. '84.32'")
+    volatility_ann:        float = Field(..., description="Annualised vol (%, log-return basis)")
+    volatility_label:      str   = Field(..., description="e.g. 'Low regime', 'Moderate'")
+    prob_range_low:        float = Field(..., description="P10 terminal rate")
+    prob_range_high:       float = Field(..., description="P90 terminal rate")
+    prob_range_label:      str   = Field(..., description="e.g. '82.10 – 88.50'")
+    confidence_pct:        float = Field(..., description="Ensemble confidence (0–100)")
+    confidence_label:      str
+    horizon_label:         str
+    horizon_calendar_days: int
+
+
+class FXMonteCarloResponse(BaseModel):
+    """Complete FX Monte Carlo simulation response.
+
+    Top-level envelope returned by ``GET /api/v1/forecast/fx/monte-carlo``.
+
+    Field layout is identical to ``SOFRMonteCarloResponse`` except:
+    - ``pair_id`` replaces ``series_id``
+    - ``stationarity`` is omitted (log-return stationarity is an ARIMA assumption)
+    - ``accuracy`` and ``fit_metrics`` are omitted (no held-out test window)
+    """
+    pair_id:         str = Field(..., description="Pair ID, e.g. 'INRUSD'")
+    display_name:    str = Field(..., description="Human label, e.g. 'USD/INR'")
+    model_name:      str
+    fitted_order:    list[int]
+    n_simulations:   int
+    simulation_mode: Literal["bootstrap", "parametric"]
+    seed:            int | None = None
+
+    # Training / forecast window
+    train_end:       str
+    forecast_start:  str
+    forecast_end:    str
+
+    # Fan chart data — all percentile paths at every forecast date
+    bands: PercentileBandsSchema
+
+    # Terminal rate distribution at the last forecast date
+    terminal_distribution: TerminalDistributionSchema
+
+    # Intermediate distributions at 3M / 6M / 9M checkpoints
+    snapshot_distributions: list[TerminalDistributionSchema] = Field(default_factory=list)
+
+    # ARIMA point-forecast overlay (central line rendered on top of MC fan)
+    arima_points: list[ForecastPointSchema]
+
+    # Derived KPI values — same field names as SOFR for frontend reuse
+    summary: FXMonteCarloSummarySchema
+
+    # Simulation diagnostics
+    convergence: ConvergenceSchema | None = None
+
+    wall_time_s: float

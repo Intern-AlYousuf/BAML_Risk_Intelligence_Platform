@@ -9,16 +9,17 @@ import type { StatSignal } from '@/components/cards/StatCard';
    Public types
    --------------------------------------------------------------------------- */
 
-export type Horizon = '3M' | '6M' | '12M';
+export type Horizon   = '3M' | '6M' | '12M';
+export type CurrencyPair = 'NGNUSD' | 'INRUSD' | 'EURINR';
 
-export interface SOFRMetrics {
-  projected:        string;
+export interface FXMetrics {
+  projectedRate:    string;
   projectedRaw:     number;
   projectedDelta:   string;
   projectedSignal:  StatSignal;
   volatility:       string;
-  probRange:        string;
-  probRangeRaw:     number;
+  var95:            string;
+  var95Raw:         number;
   confidence:       string;
   confidenceRaw:    number;
   confSignal:       StatSignal;
@@ -34,9 +35,7 @@ export interface PercentileValues {
 }
 
 /* ---------------------------------------------------------------------------
-   Internal API response types
-   Mirrors GET /api/v1/forecast/sofr/monte-carlo → SOFRMonteCarloResponse
-   All fields are optional — a partial response degrades gracefully.
+   Internal API response types — mirrors FX Monte Carlo response schema
    --------------------------------------------------------------------------- */
 
 interface ApiBands {
@@ -93,15 +92,15 @@ interface ApiSummary {
 }
 
 interface ApiConvergence {
-  n_simulations?:     number;
-  p50_std_error_bps?: number;
-  threshold_bps?:     number;
-  is_converged?:      boolean;
-  message?:           string;
+  n_simulations?:    number;
+  p50_std_error?:    number;
+  threshold?:        number;
+  is_converged?:     boolean;
+  message?:          string;
 }
 
-interface MonteCarloResponse {
-  series_id?:       string;
+interface FXMonteCarloResponse {
+  pair?:            string;
   model_name?:      string;
   fitted_order?:    number[];
   n_simulations?:   number;
@@ -130,34 +129,18 @@ const HORIZON_DAYS: Record<Horizon, number> = {
   '12M': 365,
 };
 
-/**
- * Absolute backend URL — bypasses the Next.js proxy entirely.
- *
- * WHY: On Windows, Node.js resolves "localhost" to ::1 (IPv6) before
- * 127.0.0.1 (IPv4). FastAPI binds only to 127.0.0.1, so the proxy
- * gets ECONNREFUSED and returns 500. Using 127.0.0.1 directly forces
- * IPv4 and avoids the resolution race.
- *
- * CORS: The backend allows http://localhost:3000 as an origin, so
- * calling cross-origin from the dev server is safe.
- */
 const BACKEND = 'http://127.0.0.1:8000';
 
 /* ---------------------------------------------------------------------------
    Helpers
    --------------------------------------------------------------------------- */
 
-/**
- * Returns one tick per calendar month (the first business day in each month
- * that exists in the data array).  This produces clean monthly labels for
- * 3M / 6M / 12M horizons without compressing the visible chart range.
- */
 function monthlyTicks(dates: string[]): string[] {
   if (dates.length === 0) return [];
   const seen = new Set<string>();
   const ticks: string[] = [];
   for (const d of dates) {
-    const ym = d.slice(0, 7); // "YYYY-MM"
+    const ym = d.slice(0, 7);
     if (!seen.has(ym)) {
       seen.add(ym);
       ticks.push(d);
@@ -173,29 +156,22 @@ function safeNum(v: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-/* ---------------------------------------------------------------------------
-   Safe JSON parse
-   Reads body as text first so a non-JSON error page doesn't throw.
-   --------------------------------------------------------------------------- */
-
 async function safeReadJson(res: Response): Promise<unknown> {
   const text = await res.text().catch(() => '');
   if (!text) return null;
   try {
     return JSON.parse(text);
   } catch {
-    console.warn('[useSofrForecast] response body is not valid JSON — first 300 chars:', text.slice(0, 300));
+    console.warn('[useFxForecast] response body is not valid JSON — first 300 chars:', text.slice(0, 300));
     return null;
   }
 }
 
 /* ---------------------------------------------------------------------------
    Data transformation
-   Every field access uses optional chaining + nullish coalescing so a
-   partially-populated response degrades gracefully instead of throwing.
    --------------------------------------------------------------------------- */
 
-function transform(raw: MonteCarloResponse) {
+function transform(raw: FXMonteCarloResponse) {
   const bands    = raw.bands                 ?? {};
   const arimaRaw = raw.arima_points          ?? [];
   const distRaw  = raw.terminal_distribution ?? {};
@@ -209,7 +185,7 @@ function transform(raw: MonteCarloResponse) {
   const p75arr = bands.p75   ?? [];
   const p90arr = bands.p90   ?? [];
 
-  /* ── Fan chart ─────────────────────────────────────────────────────── */
+  /* ── Fan chart ──────────────────────────────────────────────────────── */
 
   const chartData: ForecastPoint[] = dates.map((date, i) => ({
     date,
@@ -222,7 +198,7 @@ function transform(raw: MonteCarloResponse) {
 
   const forecastTickDates = monthlyTicks(dates);
 
-  /* ── Distribution ──────────────────────────────────────────────────── */
+  /* ── Distribution ───────────────────────────────────────────────────── */
 
   const bins = distRaw.bins ?? [];
   const distributionData: DistributionPoint[] = bins.map(bin => ({
@@ -230,7 +206,7 @@ function transform(raw: MonteCarloResponse) {
     prob: +(safeNum(bin.probability) * 100).toFixed(3),
   }));
 
-  /* ── Percentiles ───────────────────────────────────────────────────── */
+  /* ── Percentiles ────────────────────────────────────────────────────── */
 
   const pct           = distRaw.percentiles ?? {};
   const projectedRate = safeNum(summary.projected_rate);
@@ -245,38 +221,46 @@ function transform(raw: MonteCarloResponse) {
 
   const baseRateRange = { low: percentileValues.p25, high: percentileValues.p75 };
 
-  /* ── KPI metrics ───────────────────────────────────────────────────── */
+  /* ── KPI metrics ────────────────────────────────────────────────────── */
 
   const spotRate     = safeNum(arimaRaw[0]?.forecast, safeNum(p50arr[0]));
   const terminalRate = projectedRate;
-  const delta_bps    = Math.round((terminalRate - spotRate) * 100);
+
+  const pctDelta = spotRate !== 0
+    ? ((terminalRate - spotRate) / spotRate) * 100
+    : 0;
 
   const projectedDelta =
-    delta_bps === 0 ? 'Flat'
-    : delta_bps > 0 ? `+${delta_bps} bps`
-    : `${delta_bps} bps`;
+    Math.abs(pctDelta) < 0.01 ? 'Flat'
+    : pctDelta > 0 ? `+${pctDelta.toFixed(1)}%`
+    : `${pctDelta.toFixed(1)}%`;
 
   const projectedSignal: StatSignal =
-    delta_bps < -5 ? 'positive' :
-    delta_bps > 5  ? 'negative' :
+    pctDelta < -1 ? 'positive' :
+    pctDelta > 1  ? 'negative' :
     'neutral';
 
-  const probRangeRaw  = safeNum(summary.prob_range_high) - safeNum(summary.prob_range_low);
-  const confidenceRaw = safeNum(summary.confidence_pct, 70);
+  // VaR 95%: distance from P50 to P95 (worst 5% depreciation move)
+  const p95 = safeNum(pct['95'], percentileValues.p90);
+  const var95Raw = Math.abs(p95 - percentileValues.p50);
+  const var95    = var95Raw.toFixed(4);
 
+  const confidenceRaw = safeNum(summary.confidence_pct, 70);
   const confSignal: StatSignal =
     confidenceRaw >= 80 ? 'positive' :
     confidenceRaw >= 68 ? 'warning'  :
     'negative';
 
-  const metrics: SOFRMetrics = {
-    projected:       summary.projected_rate_label ?? terminalRate.toFixed(2),
+  const volatilityAnn = safeNum(summary.volatility_ann);
+
+  const metrics: FXMetrics = {
+    projectedRate:   summary.projected_rate_label ?? terminalRate.toFixed(4),
     projectedRaw:    terminalRate,
     projectedDelta,
     projectedSignal,
-    volatility:      String(Math.round(safeNum(summary.volatility_ann))),
-    probRange:       String(Math.round(probRangeRaw * 100)),
-    probRangeRaw,
+    volatility:      volatilityAnn.toFixed(2),
+    var95,
+    var95Raw,
     confidence:      String(Math.round(confidenceRaw)),
     confidenceRaw,
     confSignal,
@@ -304,7 +288,7 @@ interface HookState {
   distributionData:   DistributionPoint[];
   percentileValues:   PercentileValues | null;
   baseRateRange:      { low: number; high: number };
-  metrics:            SOFRMetrics | null;
+  metrics:            FXMetrics | null;
   fittedOrder:        [number, number, number] | null;
   loading:            boolean;
   error:              Error | null;
@@ -323,10 +307,10 @@ const INITIAL_STATE: HookState = {
 };
 
 /* ---------------------------------------------------------------------------
-   useSofrForecast
+   useFxForecast
    --------------------------------------------------------------------------- */
 
-export function useSofrForecast(horizon: Horizon) {
+export function useFxForecast(pair: CurrencyPair, horizon: Horizon) {
   const [state, setState] = useState<HookState>(INITIAL_STATE);
 
   const fetchData = useCallback(async () => {
@@ -334,27 +318,22 @@ export function useSofrForecast(horizon: Horizon) {
 
     try {
       const days = HORIZON_DAYS[horizon];
+      const url  = `${BACKEND}/api/v1/forecast/fx/monte-carlo?pair=${pair}&horizon=${days}&n_simulations=10000`;
 
-      // Absolute URL — bypasses the Next.js proxy (localhost → ::1 issue on Windows).
-      // See BACKEND constant above for rationale.
-      const url = `${BACKEND}/api/v1/forecast/sofr/monte-carlo?horizon=${days}&n_simulations=10000`;
-
-      console.log('[SOFR fetch URL]', url);
+      console.log('[FX fetch URL]', url);
 
       const res = await fetch(url);
 
-      // Read body as text → parse JSON manually so non-JSON error pages are
-      // handled gracefully instead of throwing inside res.json().
       const bodyJson = await safeReadJson(res);
 
-      console.log('[useSofrForecast] raw response:', {
-        status:  res.status,
-        ok:      res.ok,
+      console.log('[useFxForecast] raw response:', {
+        status: res.status,
+        ok:     res.ok,
+        pair,
         horizon,
-        body:    bodyJson,
+        body:   bodyJson,
       });
 
-      // ── HTTP error ───────────────────────────────────────────────────────
       if (!res.ok) {
         const body   = bodyJson as Record<string, unknown> | null;
         const detail = body?.detail;
@@ -363,22 +342,21 @@ export function useSofrForecast(horizon: Horizon) {
             ? detail
             : `API error ${res.status} — ${res.statusText}`;
 
-        console.error('[useSofrForecast] HTTP error:', res.status, detail ?? res.statusText);
+        console.error('[useFxForecast] HTTP error:', res.status, detail ?? res.statusText);
         throw new Error(msg);
       }
 
-      // ── Transform ────────────────────────────────────────────────────────
       let data: ReturnType<typeof transform>;
       try {
-        data = transform(bodyJson as MonteCarloResponse);
+        data = transform(bodyJson as FXMonteCarloResponse);
       } catch (transformErr) {
         console.error(
-          '[useSofrForecast] transform() failed:',
+          '[useFxForecast] transform() failed:',
           transformErr,
           '\nRaw body:', bodyJson,
         );
         throw new Error(
-          `Failed to parse forecast response: ${
+          `Failed to parse FX forecast response: ${
             transformErr instanceof Error ? transformErr.message : String(transformErr)
           }`
         );
@@ -388,10 +366,10 @@ export function useSofrForecast(horizon: Horizon) {
 
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
-      console.error('[useSofrForecast] fetch failed:', error.message);
+      console.error('[useFxForecast] fetch failed:', error.message);
       setState(prev => ({ ...prev, loading: false, error }));
     }
-  }, [horizon]);
+  }, [pair, horizon]);
 
   useEffect(() => {
     fetchData();

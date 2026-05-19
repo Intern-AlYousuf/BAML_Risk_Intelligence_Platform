@@ -1,25 +1,27 @@
 """SOFR Forecasting Service — async orchestration layer.
 
-Sits between the API routes and the CPU-bound engine.  The data loading step
-is async (FRED HTTP call); the ARIMA fitting step is synchronous and CPU-bound.
-Fitting is offloaded to the default thread-pool executor so FastAPI's async
-event loop is never blocked.
+Sits between the API routes and the CPU-bound engine.
+
+Data loading steps are async (FRED HTTP calls); SARIMAX/ARIMA fitting is
+synchronous and CPU-bound.  Fitting is offloaded to the default thread-pool
+executor so FastAPI's async event loop is never blocked.
+
+Exogenous loading (Phase 2)
+---------------------------
+When ``config.use_exogenous=True`` (the default), the service loads six macro
+variables from FRED concurrently alongside SOFR.  The resulting DataFrame is
+passed to ``engine.run()`` so the engine can use SARIMAX delta forecasting.
+
+If any exogenous load fails (network error, missing FRED key for a series)
+the service logs a warning and passes ``exog_df=None``.  The engine detects
+this and automatically falls back to the ARIMA levels pipeline — existing
+API behaviour is preserved.
 
 Dependency injection
 --------------------
-``get_sofr_forecast_service`` is a FastAPI dependency factory.  Routes should
-declare it as a ``Depends()`` parameter rather than constructing the service
-directly.
-
-Typical route usage
--------------------
-    @router.get("/sofr/forecast")
-    async def get_sofr_forecast(
-        horizon: int = Query(365),
-        service: SOFRForecastService = Depends(get_sofr_forecast_service),
-    ) -> dict:
-        output = await service.run_forecast(horizon_calendar_days=horizon)
-        return output.to_dict()
+``get_sofr_forecast_service`` is a FastAPI dependency factory that manages
+httpx client lifecycle and injects a ``FREDLoader`` alongside the existing
+``ForecastingDataService``.
 """
 from __future__ import annotations
 
@@ -29,9 +31,12 @@ from datetime import date
 from typing import AsyncIterator
 
 import httpx
+import pandas as pd
 
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.forecasting.data.exogenous import build_exogenous_dataframe
+from app.forecasting.data.loaders.fred import FREDLoader
 from app.forecasting.simulations.config import MonteCarloConfig
 from app.forecasting.sofr.engine import (
     SOFRForecastConfig,
@@ -42,7 +47,6 @@ from app.services.forecasting_data_service import ForecastingDataService
 
 logger = get_logger(__name__)
 
-# Named horizons for validation and logging.
 VALID_HORIZONS_CALENDAR: frozenset[int] = frozenset({90, 180, 365, 730})
 
 
@@ -52,20 +56,24 @@ class SOFRForecastService:
     Parameters
     ----------
     data_service:
-        ``ForecastingDataService`` for loading and preprocessing SOFR data
-        from FRED.
+        ``ForecastingDataService`` for loading and preprocessing SOFR.
+    fred_loader:
+        Authenticated ``FREDLoader`` used for macro exogenous variables.
+        When ``None``, exogenous loading is skipped and the engine uses
+        the ARIMA fallback.
     config:
-        Engine configuration.  The endpoint can override this per-request by
-        constructing a new service with a custom config.
+        Engine configuration.
     """
 
     def __init__(
         self,
         data_service: ForecastingDataService,
+        fred_loader:  FREDLoader | None         = None,
         config:       SOFRForecastConfig | None = None,
     ) -> None:
-        self._data   = data_service
-        self._config = config or SOFRForecastConfig()
+        self._data        = data_service
+        self._fred_loader = fred_loader
+        self._config      = config or SOFRForecastConfig()
 
     # ── Primary method ────────────────────────────────────────────────────────
 
@@ -84,24 +92,26 @@ class SOFRForecastService:
         simulation_mode:       str  = "bootstrap",
         simulation_seed:       int | None = None,
     ) -> SOFRForecastOutput:
-        """Load SOFR data and run the forecast engine.
+        """Load SOFR (+ macro features) and run the forecast engine.
 
         Parameters
         ----------
         horizon_calendar_days:
-            Calendar days to forecast ahead.  Converted to business days
-            inside the engine.  Typical values: 90, 180, 365, 730.
+            Calendar days ahead to forecast.  Converted to business days
+            inside the engine.
         lookback_years:
-            Years of history to load for model training.  Defaults to
+            Years of SOFR history to load.  Defaults to
             ``settings.FORECAST_DEFAULT_LOOKBACK_YEARS``.
         start, end:
-            Override the date range explicitly.  ``end`` defaults to today.
+            Explicit date range override.
         arima_order:
-            Force a specific (p, d, q) order.  ``None`` = auto-select via AIC.
+            Force ARIMA(p,d,q).  ``None`` = auto-select via AIC.
         enable_backtest:
-            Run walk-forward backtest in addition to the primary forecast.
+            Walk-forward backtest (adds latency).
         run_diagnostics:
-            Run residual diagnostics on the fitted model.
+            Residual diagnostics (negligible overhead).
+        enable_simulation:
+            Monte Carlo simulation with n_simulations paths.
 
         Returns
         -------
@@ -114,7 +124,7 @@ class SOFRForecastService:
                 valid=sorted(VALID_HORIZONS_CALENDAR),
             )
 
-        # ── Step 1: load + preprocess SOFR (async — FRED HTTP call) ───────
+        # ── Step 1: load SOFR (async FRED call) ───────────────────────────
         logger.info(
             "sofr_service.data_load.start",
             horizon=horizon_calendar_days,
@@ -134,16 +144,32 @@ class SOFRForecastService:
             series_end=str(forecast_input.date_range.end),
         )
 
-        # ── Step 2: build engine config ────────────────────────────────────
-        mc_cfg = MonteCarloConfig(
-            n_simulations=n_simulations,
-            mode=simulation_mode,
-            seed=simulation_seed,
-            floor=self._config.floor,
-            ceiling=self._config.ceiling,
-        ) if enable_simulation else MonteCarloConfig.fast()
+        # ── Step 2: load macro exogenous features (async, concurrent) ─────
+        exog_df: pd.DataFrame | None = None
+        if self._config.use_exogenous and self._fred_loader is not None:
+            exog_df = await self._load_exogenous(
+                sofr_index    = forecast_input.levels.dropna().index,
+                lookback_years= lookback_years or getattr(
+                    settings, "FORECAST_DEFAULT_LOOKBACK_YEARS", 5
+                ),
+            )
+
+        # ── Step 3: build engine config ────────────────────────────────────
+        mc_cfg = (
+            MonteCarloConfig(
+                n_simulations = n_simulations,
+                mode          = simulation_mode,
+                seed          = simulation_seed,
+                floor         = self._config.floor,
+                ceiling       = self._config.ceiling,
+            )
+            if enable_simulation
+            else MonteCarloConfig.fast()
+        )
 
         engine_config = SOFRForecastConfig(
+            forecast_mode     = self._config.forecast_mode,
+            use_exogenous     = self._config.use_exogenous,
             arima_order       = arima_order or self._config.arima_order,
             max_p             = self._config.max_p,
             max_q             = self._config.max_q,
@@ -160,30 +186,69 @@ class SOFRForecastService:
 
         engine = SOFRForecastEngine(config=engine_config)
 
-        # ── Step 3: run engine in thread pool (CPU-bound) ─────────────────
+        # ── Step 4: run engine in thread pool (CPU-bound) ─────────────────
         loop = asyncio.get_running_loop()
 
-        logger.info("sofr_service.engine.submit")
+        logger.info(
+            "sofr_service.engine.submit",
+            forecast_mode=engine_config.forecast_mode,
+            exog_features=(
+                list(exog_df.columns) if exog_df is not None else None
+            ),
+        )
 
         output: SOFRForecastOutput = await loop.run_in_executor(
             None,
             functools.partial(
                 engine.run,
-                forecast_input=forecast_input,
-                horizon_calendar_days=horizon_calendar_days,
+                forecast_input        = forecast_input,
+                horizon_calendar_days = horizon_calendar_days,
+                exog_df               = exog_df,
             ),
         )
 
         logger.info(
             "sofr_service.engine.done",
-            fitted_order=output.fitted_order,
-            n_forecast=output.forecast.n_forecast_points,
-            fit_time_s=output.fit_wall_time_s,
+            fitted_order = output.fitted_order,
+            model_name   = output.forecast.model_name,
+            n_forecast   = output.forecast.n_forecast_points,
+            fit_time_s   = output.fit_wall_time_s,
         )
 
         return output
 
-    # ── Convenience thin wrappers ─────────────────────────────────────────────
+    # ── Exogenous loading ─────────────────────────────────────────────────────
+
+    async def _load_exogenous(
+        self,
+        sofr_index:     pd.DatetimeIndex,
+        lookback_years: int,
+    ) -> pd.DataFrame | None:
+        """Load macro exogenous features from FRED.
+
+        Returns ``None`` on failure so the engine falls back to ARIMA.
+        """
+        try:
+            exog_df = await build_exogenous_dataframe(
+                fred_loader    = self._fred_loader,
+                sofr_index     = sofr_index,
+                lookback_years = max(lookback_years, 7),  # CPI YoY needs ≥12M
+            )
+            logger.info(
+                "sofr_service.exog.loaded",
+                shape=str(exog_df.shape),
+                features=list(exog_df.columns),
+            )
+            return exog_df if not exog_df.empty else None
+        except Exception as exc:
+            logger.warning(
+                "sofr_service.exog.load_failed",
+                error=str(exc),
+                fallback="ARIMA levels pipeline (no exog)",
+            )
+            return None
+
+    # ── Convenience wrappers ──────────────────────────────────────────────────
 
     async def forecast_3m(self, **kwargs) -> SOFRForecastOutput:
         return await self.run_forecast(horizon_calendar_days=90, **kwargs)
@@ -205,18 +270,20 @@ async def get_sofr_forecast_service() -> AsyncIterator[SOFRForecastService]:
     """FastAPI dependency — provides a scoped SOFRForecastService.
 
     Lifecycle:
-    1. Opens an httpx.AsyncClient for the FRED loader.
-    2. Constructs ForecastingDataService and SOFRForecastService.
-    3. Yields the service to the route handler.
-    4. Closes the HTTP client on exit (even on exception).
-
-    In production, replace the per-request client with a lifespan-managed
-    client to reduce TLS handshake overhead on burst traffic.
+    1. Opens a single httpx.AsyncClient (reused for SOFR + all exog loaders).
+    2. Constructs ForecastingDataService and FREDLoader sharing the client.
+    3. Constructs SOFRForecastService with both.
+    4. Yields the service.
+    5. Closes the HTTP client on exit (even on exception).
     """
     async with httpx.AsyncClient(
         timeout=settings.FRED_REQUEST_TIMEOUT_SECONDS,
         headers={"User-Agent": f"{settings.APP_NAME}/{settings.APP_VERSION}"},
     ) as http_client:
-        data_service   = ForecastingDataService(http_client=http_client)
-        forecast_service = SOFRForecastService(data_service=data_service)
+        data_service     = ForecastingDataService(http_client=http_client)
+        fred_loader      = FREDLoader(client=http_client)   # shares the client
+        forecast_service = SOFRForecastService(
+            data_service = data_service,
+            fred_loader  = fred_loader,
+        )
         yield forecast_service

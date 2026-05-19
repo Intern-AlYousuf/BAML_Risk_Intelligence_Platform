@@ -136,6 +136,73 @@ _FRED_CATALOGUE: dict[str, SeriesMetadata] = {
         description="Yield spread between the 10-year and 2-year Treasury. Recession indicator.",
         source_id="T10Y2Y",
     ),
+    # ── Macro exogenous variables for SARIMAX SOFR forecasting ───────────────
+    "FEDFUNDS": SeriesMetadata(
+        series_id="FEDFUNDS",
+        name="Federal Funds Effective Rate",
+        asset_class=AssetClass.INTEREST_RATE,
+        frequency=SeriesFrequency.DAILY,
+        source=DataSource.FRED,
+        units="percent_annualized",
+        description=(
+            "Effective federal funds rate published by the Federal Reserve Board. "
+            "Alias for DFF (daily). Policy rate anchor for short-end rates."
+        ),
+        source_id="DFF",   # FRED series ID is DFF; FEDFUNDS is the platform alias
+    ),
+    "CPIAUCSL": SeriesMetadata(
+        series_id="CPIAUCSL",
+        name="Consumer Price Index for All Urban Consumers",
+        asset_class=AssetClass.INTEREST_RATE,
+        frequency=SeriesFrequency.MONTHLY,
+        source=DataSource.FRED,
+        units="index_1982_84_equals_100",
+        description=(
+            "Monthly CPI-U level. Transformed to year-over-year % change in the "
+            "exogenous feature pipeline. Released with ~2-week lag; use with "
+            "forward-fill to avoid lookahead."
+        ),
+        source_id="CPIAUCSL",
+    ),
+    "UNRATE": SeriesMetadata(
+        series_id="UNRATE",
+        name="Civilian Unemployment Rate",
+        asset_class=AssetClass.INTEREST_RATE,
+        frequency=SeriesFrequency.MONTHLY,
+        source=DataSource.FRED,
+        units="percent",
+        description=(
+            "Monthly U-3 unemployment rate. Forward-filled to business-day "
+            "frequency in the exogenous feature pipeline."
+        ),
+        source_id="UNRATE",
+    ),
+    "DGS2": SeriesMetadata(
+        series_id="DGS2",
+        name="2-Year Treasury Constant Maturity Rate",
+        asset_class=AssetClass.INTEREST_RATE,
+        frequency=SeriesFrequency.DAILY,
+        source=DataSource.FRED,
+        units="percent_annualized",
+        description=(
+            "Daily 2-year on-the-run Treasury yield. Highly sensitive to "
+            "near-term Fed policy expectations; strong short-term SOFR predictor."
+        ),
+        source_id="DGS2",
+    ),
+    "DGS10": SeriesMetadata(
+        series_id="DGS10",
+        name="10-Year Treasury Constant Maturity Rate",
+        asset_class=AssetClass.INTEREST_RATE,
+        frequency=SeriesFrequency.DAILY,
+        source=DataSource.FRED,
+        units="percent_annualized",
+        description=(
+            "Daily 10-year on-the-run Treasury yield. Captures term premium "
+            "and long-run inflation expectations."
+        ),
+        source_id="DGS10",
+    ),
 }
 
 

@@ -483,6 +483,7 @@ export default function SOFRPage() {
               <DistributionChart
                 data={distributionData}
                 baseRange={baseRateRange.low ? baseRateRange : undefined}
+                assetLabel="SOFR"
                 height={320}
               />
             </ChartCard>

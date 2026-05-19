@@ -19,8 +19,11 @@ const nextConfig: NextConfig = {
    * identically on local, Docker, and Vercel + Railway.
    */
   async rewrites() {
+    // Default to 127.0.0.1 rather than localhost: on Windows, Node.js resolves
+    // "localhost" to ::1 (IPv6) before 127.0.0.1 (IPv4).  FastAPI binds only
+    // to 127.0.0.1, so the proxy would get ECONNREFUSED and return 500.
     const backendUrl =
-      process.env.BACKEND_URL ?? 'http://localhost:8000';
+      process.env.BACKEND_URL ?? 'http://127.0.0.1:8000';
     return [
       {
         source: '/api/:path*',

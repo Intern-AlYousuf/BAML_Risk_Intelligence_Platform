@@ -3,8 +3,9 @@
 Provides:
   GET /forecast/sofr              ARIMA forecast with CI bands
   GET /forecast/sofr/monte-carlo  Monte Carlo fan chart + terminal distribution
+  GET /forecast/fx/monte-carlo    FX Monte Carlo fan chart + terminal distribution
 
-These routes are the authoritative typed API for the SOFR Forecast page.
+These routes are the authoritative typed API for the SOFR and FX Forecast pages.
 Every field in every response is declared in ``app/schemas/forecast.py`` and
 validated by Pydantic before the response is serialised.
 
@@ -28,6 +29,9 @@ from app.core.config import settings
 from app.core.exceptions import ExternalServiceError, NotFoundError
 from app.forecasting.sofr.diagnostics import ResidualDiagnostics, SOFRStationarityCheck
 from app.forecasting.sofr.engine import SOFRForecastOutput
+from app.forecasting.fx.engine import FXForecastOutput
+from app.forecasting.fx.registry import FX_PAIR_REGISTRY, get_pair_config
+from app.forecasting.fx.service import FXForecastService
 from app.forecasting.simulations.engine import MonteCarloResult
 from app.forecasting.simulations.statistics import PercentileBands, TerminalDistribution
 from app.forecasting.models.results import (
@@ -43,6 +47,8 @@ from app.schemas.forecast import (
     DistributionBinSchema,
     ForecastPointSchema,
     ForecastSummarySchema,
+    FXMonteCarloResponse,
+    FXMonteCarloSummarySchema,
     ModelFitMetricsSchema,
     MonteCarloSummarySchema,
     PercentileBandsSchema,
@@ -573,3 +579,200 @@ def _parse_arima_order(
             ),
         )
     return (p, d, q)  # type: ignore[return-value]
+
+
+# ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ──
+#  FX FORECAST ENDPOINT
+# ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ──
+
+
+@router.get(
+    "/fx/monte-carlo",
+    response_model=FXMonteCarloResponse,
+    summary="FX Monte Carlo simulation — fan chart and terminal distribution",
+    description="""
+Fits ARIMA(p, 0, q) on daily log returns of the requested FX pair, then
+generates `n_simulations` independent future rate paths.
+
+**Supported pairs**
+
+| pair    | Description        | Yahoo Finance symbol |
+|---------|--------------------|----------------------|
+| INRUSD  | USD/INR spot rate  | USDINR=X             |
+| NGNUSD  | USD/NGN spot rate  | USDNGN=X             |
+| EURINR  | EUR/INR spot rate  | EURINR=X             |
+
+**Modelling approach**
+
+Log returns `r_t = log(P_t / P_{t-1})` are stationary for FX, so ARIMA is fit
+with `d=0`.  Future levels are reconstructed:
+`P_{t+k} = P_last × exp(Σ r_{t+1..t+k})`.
+
+**Response structure**
+
+Identical to the SOFR Monte Carlo response:
+- **bands** — P5/P10/P25/P50/P75/P90/P95 at every business day
+- **arima_points** — deterministic level forecast (ARIMA central path)
+- **terminal_distribution** — probability histogram at the final date
+- **summary** — projected rate, annualised vol, probability range, confidence
+- **convergence** — path-ensemble stability check
+""",
+    responses={
+        status.HTTP_200_OK:                   {"description": "FX Monte Carlo output"},
+        status.HTTP_404_NOT_FOUND:            {"description": "Unsupported FX pair"},
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation or simulation error"},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Simulation did not complete"},
+    },
+)
+async def get_fx_monte_carlo(
+    pair:          Annotated[str, Query(description="FX pair ID: INRUSD | NGNUSD | EURINR")] = "INRUSD",
+    horizon:       Annotated[int, Query(ge=30, le=730, description="Forecast horizon in calendar days")] = 365,
+    lookback_years: Annotated[int, Query(ge=1, le=10)] = 5,
+    n_simulations: Annotated[int, Query(ge=100, le=50_000, description="Number of simulated paths")] = 10_000,
+    mode:          Annotated[str, Query(description="'bootstrap' or 'parametric'")] = "bootstrap",
+    seed:          Annotated[int | None, Query(description="RNG seed for reproducibility")] = None,
+    arima_p:       Annotated[int | None, Query(ge=0, le=8)] = None,
+    arima_q:       Annotated[int | None, Query(ge=0, le=8)] = None,
+) -> FXMonteCarloResponse:
+    # ── Validate pair ──────────────────────────────────────────────────────
+    pair_upper = pair.upper()
+    if pair_upper not in FX_PAIR_REGISTRY:
+        valid = ", ".join(sorted(FX_PAIR_REGISTRY))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"FX pair '{pair}' is not supported.  Valid pairs: {valid}",
+        )
+
+    if mode not in ("bootstrap", "parametric"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="mode must be 'bootstrap' or 'parametric'",
+        )
+
+    # ARIMA order for FX is (p, 0, q) — d is always 0 for log returns
+    arima_order: tuple[int, int, int] | None = None
+    if arima_p is not None and arima_q is not None:
+        arima_order = (arima_p, 0, arima_q)
+
+    # ── Run FX forecast service ────────────────────────────────────────────
+    service = FXForecastService()
+
+    try:
+        output = await service.run_forecast(
+            pair                  = pair_upper,
+            horizon_calendar_days = horizon,
+            lookback_years        = lookback_years,
+            arima_order           = arima_order,
+            enable_simulation     = True,
+            n_simulations         = n_simulations,
+            simulation_mode       = mode,
+            simulation_seed       = seed,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"FX simulation error: {exc}",
+        )
+
+    if output.simulation is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Simulation did not produce output — check server logs.",
+        )
+
+    return _build_fx_monte_carlo_response(output, horizon, mode, seed)
+
+
+# ── FX response builder ───────────────────────────────────────────────────────
+
+
+def _build_fx_monte_carlo_response(
+    output:                FXForecastOutput,
+    horizon_calendar_days: int,
+    mode:                  str,
+    seed:                  int | None,
+) -> FXMonteCarloResponse:
+    """Map FXForecastOutput → FXMonteCarloResponse (Pydantic schema).
+
+    Reuses all existing SOFR builder helpers (_build_bands, _build_distribution,
+    _build_convergence, _build_forecast_point) — they operate on domain objects
+    and have no SOFR-specific dependencies.
+    """
+    sim    = output.simulation
+    fc     = output.forecast
+    pair   = output.pair_id
+
+    try:
+        pair_cfg = get_pair_config(pair)
+        display_name = pair_cfg.display_name
+    except KeyError:
+        display_name = pair
+
+    return FXMonteCarloResponse(
+        pair_id          = pair,
+        display_name     = display_name,
+        model_name       = fc.model_name,
+        fitted_order     = list(output.fitted_order),
+        n_simulations    = sim.n_simulations,
+        simulation_mode  = mode,
+        seed             = seed,
+        train_end        = str(fc.train_end),
+        forecast_start   = str(sim.forecast_start),
+        forecast_end     = str(sim.forecast_end),
+        bands            = _build_bands(sim.bands),
+        terminal_distribution  = _build_distribution(sim.terminal_distribution),
+        snapshot_distributions = [_build_distribution(d) for d in sim.snapshot_distributions],
+        arima_points     = [_build_forecast_point(p) for p in fc.points],
+        summary          = _build_fx_summary(sim, horizon_calendar_days),
+        convergence      = _build_convergence(sim.convergence),
+        wall_time_s      = round(sim.wall_time_s, 3),
+    )
+
+
+def _build_fx_summary(
+    sim:                   MonteCarloResult,
+    horizon_calendar_days: int,
+) -> FXMonteCarloSummarySchema:
+    """Derive KPI values from the FX Monte Carlo ensemble.
+
+    Mirrors _build_mc_summary for SOFR; annualised vol is computed on the
+    same log-return basis appropriate for FX rates.
+    """
+    dist = sim.terminal_distribution
+    pct  = dist.percentiles
+
+    p50 = round(float(pct.get("50", pct.get(50, dist.mean))), 4)
+    p10 = round(float(pct.get("10", pct.get(10, dist.mean - dist.std))), 4)
+    p90 = round(float(pct.get("90", pct.get(90, dist.mean + dist.std))), 4)
+
+    # Annualised vol: σ_terminal * sqrt(252 / horizon_bdays) as a % of spot rate
+    horizon_bdays = sim.horizon_bdays or 1
+    if p50 > 0:
+        vol_ann = round(
+            (dist.std / p50) * math.sqrt(max(1, 252 / horizon_bdays)) * 100, 2
+        )
+    else:
+        vol_ann = 0.0
+
+    ci_width   = p90 - p10
+    confidence = round(
+        max(40.0, min(97.0, 97.0 - (ci_width / max(p50, 0.01)) * 100 * 0.9)), 1
+    )
+
+    return FXMonteCarloSummarySchema(
+        projected_rate        = p50,
+        projected_rate_label  = f"{p50:.2f}",
+        volatility_ann        = vol_ann,
+        volatility_label      = _vol_label(vol_ann),
+        prob_range_low        = p10,
+        prob_range_high       = p90,
+        prob_range_label      = f"{p10:.2f} – {p90:.2f}",
+        confidence_pct        = confidence,
+        confidence_label      = f"{confidence:.1f}",
+        horizon_label         = _horizon_label(horizon_calendar_days),
+        horizon_calendar_days = horizon_calendar_days,
+    )
