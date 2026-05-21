@@ -29,10 +29,10 @@ export function AppShell({ children, breadcrumb, title }: AppShellProps) {
       {/* Fixed topbar — inset-left tracks sidebar width */}
       <Topbar breadcrumb={breadcrumb} title={title} />
 
-      {/* Scrollable content — offsets match sidebar (260px) + topbar (64px) */}
+      {/* Scrollable content — offsets match sidebar (280px) + topbar (72px) */}
       <main
         className="min-h-screen"
-        style={{ marginLeft: '260px', paddingTop: '64px' }}
+        style={{ marginLeft: '280px', paddingTop: '72px' }}
       >
         <motion.div
           initial={{ opacity: 0, y: 6 }}

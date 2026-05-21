@@ -145,20 +145,20 @@ export default function ScenarioPage() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
-          className="flex items-end justify-between mb-12"
+          className="flex items-end justify-between mb-14"
         >
           {/* Title block */}
-          <div className="space-y-2.5">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.20em] text-[#6B7280]">
+          <div className="space-y-3">
+            <p className="text-[11.5px] font-semibold uppercase tracking-[0.20em] text-[#6B7280]">
               Treasury Risk
             </p>
             <h1
               className="font-semibold text-[#F5F7FA] leading-none"
-              style={{ fontSize: '42px', letterSpacing: '-0.03em' }}
+              style={{ fontSize: '50px', letterSpacing: '-0.03em' }}
             >
               Scenario Analysis
             </h1>
-            <p className="text-[14px] text-[#6B7280] leading-none">
+            <p className="text-[15px] text-[#6B7280] leading-none">
               Deterministic stress-testing · Base case P&amp;L · Three risk factors
             </p>
           </div>

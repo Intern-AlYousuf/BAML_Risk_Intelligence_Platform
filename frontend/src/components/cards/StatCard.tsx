@@ -70,9 +70,9 @@ const SIZE_CONFIG: Record<StatSize, {
   deltaSize:  string;
   minHeight:  string;
 }> = {
-  sm: { pad: 'px-6 pt-6 pb-5',  label: 'text-[11px]',  valueSize: 'text-[2.5rem]',  unitSize: 'text-[1.1rem]',  deltaSize: 'text-[12px]', minHeight: 'min-h-[150px]' },
-  md: { pad: 'px-7 pt-7 pb-6',  label: 'text-[11.5px]', valueSize: 'text-[3rem]',   unitSize: 'text-[1.4rem]',  deltaSize: 'text-[13px]', minHeight: 'min-h-[180px]' },
-  lg: { pad: 'px-8 pt-8 pb-7',  label: 'text-[12px]',  valueSize: 'text-[3.5rem]', unitSize: 'text-[1.6rem]',  deltaSize: 'text-[13.5px]', minHeight: 'min-h-[200px]' },
+  sm: { pad: 'px-7 pt-7 pb-6',   label: 'text-[12px]',   valueSize: 'text-[2.75rem]', unitSize: 'text-[1.2rem]',  deltaSize: 'text-[13px]',   minHeight: 'min-h-[170px]' },
+  md: { pad: 'px-8 pt-8 pb-7',   label: 'text-[12.5px]', valueSize: 'text-[3.25rem]', unitSize: 'text-[1.5rem]',  deltaSize: 'text-[14px]',   minHeight: 'min-h-[210px]' },
+  lg: { pad: 'px-9 pt-9 pb-8',   label: 'text-[13px]',   valueSize: 'text-[4rem]',    unitSize: 'text-[1.8rem]',  deltaSize: 'text-[14.5px]', minHeight: 'min-h-[240px]' },
 };
 
 /* ---------------------------------------------------------------------------

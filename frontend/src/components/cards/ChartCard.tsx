@@ -107,15 +107,15 @@ export function ChartCard({
     >
       {/* Header ────────────────────────────────────────────────────── */}
       <div
-        className="flex items-start justify-between gap-4 px-8 pt-7 pb-6"
+        className="flex items-start justify-between gap-4 px-9 pt-8 pb-7"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
       >
         <div className="min-w-0">
-          <p className="text-[16px] font-semibold text-[#F5F7FA] leading-none tracking-tight">
+          <p className="text-[17px] font-semibold text-[#F5F7FA] leading-none tracking-tight">
             {title}
           </p>
           {subtitle && (
-            <p className="mt-1.5 text-[13px] text-[#6B7280] leading-none">{subtitle}</p>
+            <p className="mt-2 text-[13.5px] text-[#6B7280] leading-none">{subtitle}</p>
           )}
         </div>
 
@@ -126,14 +126,14 @@ export function ChartCard({
 
       {/* Legend ─────────────────────────────────────────────────────── */}
       {legend && legend.length > 0 && (
-        <div className="px-8 pt-4">
+        <div className="px-9 pt-5">
           <Legend items={legend} />
         </div>
       )}
 
       {/* Chart area ─────────────────────────────────────────────────── */}
       <div
-        className={cn('relative', flush ? '' : 'px-4 pt-3 pb-6')}
+        className={cn('relative', flush ? '' : 'px-5 pt-4 pb-7')}
         style={{ height }}
       >
         {children}

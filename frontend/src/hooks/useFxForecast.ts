@@ -185,18 +185,33 @@ function transform(raw: FXMonteCarloResponse) {
   const p75arr = bands.p75   ?? [];
   const p90arr = bands.p90   ?? [];
 
+  /* ── Historical series (from arima_points.actual) ──────────────────── */
+
+  const splitDate = raw.forecast_start ?? (dates[0] ?? null);
+
+  const histPoints = arimaRaw
+    .filter(p => p.date && p.actual !== null && p.actual !== undefined)
+    .slice(-252); // cap at ~12 months of trading days
+
+  const histData: ForecastPoint[] = histPoints.map(p => ({
+    date:   p.date as string,
+    actual: safeNum(p.actual as number),
+  }));
+
   /* ── Fan chart ──────────────────────────────────────────────────────── */
 
-  const chartData: ForecastPoint[] = dates.map((date, i) => ({
+  const forecastData: ForecastPoint[] = dates.map((date, i) => ({
     date,
-    forecast: safeNum(arimaRaw[i]?.forecast, safeNum(p50arr[i])),
+    forecast: safeNum(p50arr[i]),  // MC median path — terminal value == P50 == KPI
     p10:      safeNum(p10arr[i]),
     p25:      safeNum(p25arr[i]),
     p75:      safeNum(p75arr[i]),
     p90:      safeNum(p90arr[i]),
   }));
 
-  const forecastTickDates = monthlyTicks(dates);
+  const chartData = [...histData, ...forecastData];
+
+  const forecastTickDates = monthlyTicks(chartData.map(d => d.date));
 
   /* ── Distribution ───────────────────────────────────────────────────── */
 
@@ -223,8 +238,8 @@ function transform(raw: FXMonteCarloResponse) {
 
   /* ── KPI metrics ────────────────────────────────────────────────────── */
 
-  const spotRate     = safeNum(arimaRaw[0]?.forecast, safeNum(p50arr[0]));
-  const terminalRate = projectedRate;
+  const spotRate     = safeNum(p50arr[0]);                  // MC p50 at first forecast date
+  const terminalRate = percentileValues.p50;                // SSOT: terminal_distribution.percentiles["50"]
 
   const pctDelta = spotRate !== 0
     ? ((terminalRate - spotRate) / spotRate) * 100
@@ -254,7 +269,7 @@ function transform(raw: FXMonteCarloResponse) {
   const volatilityAnn = safeNum(summary.volatility_ann);
 
   const metrics: FXMetrics = {
-    projectedRate:   summary.projected_rate_label ?? terminalRate.toFixed(4),
+    projectedRate:   terminalRate.toFixed(4),  // raw exchange rate — no % suffix
     projectedRaw:    terminalRate,
     projectedDelta,
     projectedSignal,
@@ -270,6 +285,7 @@ function transform(raw: FXMonteCarloResponse) {
   return {
     chartData,
     forecastTickDates,
+    splitDate,
     distributionData,
     percentileValues,
     baseRateRange,
@@ -285,6 +301,7 @@ function transform(raw: FXMonteCarloResponse) {
 interface HookState {
   chartData:          ForecastPoint[];
   forecastTickDates:  string[];
+  splitDate:          string | null;
   distributionData:   DistributionPoint[];
   percentileValues:   PercentileValues | null;
   baseRateRange:      { low: number; high: number };
@@ -297,6 +314,7 @@ interface HookState {
 const INITIAL_STATE: HookState = {
   chartData:         [],
   forecastTickDates: [],
+  splitDate:         null,
   distributionData:  [],
   percentileValues:  null,
   baseRateRange:     { low: 0, high: 0 },

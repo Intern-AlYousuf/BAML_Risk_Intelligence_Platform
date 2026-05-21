@@ -23,9 +23,13 @@ from __future__ import annotations
 import math
 from typing import Annotated
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.core.cache import forecast_cache_get, forecast_cache_set
 from app.core.config import settings
+
+_log = structlog.get_logger(__name__)
 from app.core.exceptions import ExternalServiceError, NotFoundError
 from app.forecasting.sofr.diagnostics import ResidualDiagnostics, SOFRStationarityCheck
 from app.forecasting.sofr.engine import SOFRForecastOutput
@@ -211,6 +215,15 @@ async def get_sofr_monte_carlo(
 
     arima_order = _parse_arima_order(arima_p, arima_d, arima_q)
 
+    # ── Cache lookup ────────────────────────────────────────────────────────
+    _cache_key = ("sofr", horizon, n_simulations)
+    _cached = forecast_cache_get(_cache_key)
+    if _cached is not None:
+        _log.info("[CACHE HIT] SOFR", horizon_days=horizon, n_simulations=n_simulations)
+        return _cached
+    _log.info("[CACHE MISS] SOFR", horizon_days=horizon, n_simulations=n_simulations)
+    # ────────────────────────────────────────────────────────────────────────
+
     try:
         output = await service.run_forecast(
             horizon_calendar_days=horizon,
@@ -241,7 +254,9 @@ async def get_sofr_monte_carlo(
             detail="Simulation did not produce output — check server logs.",
         )
 
-    return _build_monte_carlo_response(output, horizon, mode, seed)
+    result = _build_monte_carlo_response(output, horizon, mode, seed)
+    forecast_cache_set(_cache_key, result)
+    return result
 
 
 # ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ──
@@ -654,6 +669,15 @@ async def get_fx_monte_carlo(
     if arima_p is not None and arima_q is not None:
         arima_order = (arima_p, 0, arima_q)
 
+    # ── Cache lookup ────────────────────────────────────────────────────────
+    _cache_key = ("fx", pair_upper, horizon, n_simulations)
+    _cached = forecast_cache_get(_cache_key)
+    if _cached is not None:
+        _log.info("[CACHE HIT] FX", pair=pair_upper, horizon_days=horizon, n_simulations=n_simulations)
+        return _cached
+    _log.info("[CACHE MISS] FX", pair=pair_upper, horizon_days=horizon, n_simulations=n_simulations)
+    # ────────────────────────────────────────────────────────────────────────
+
     # ── Run FX forecast service ────────────────────────────────────────────
     service = FXForecastService()
 
@@ -684,7 +708,9 @@ async def get_fx_monte_carlo(
             detail="Simulation did not produce output — check server logs.",
         )
 
-    return _build_fx_monte_carlo_response(output, horizon, mode, seed)
+    result = _build_fx_monte_carlo_response(output, horizon, mode, seed)
+    forecast_cache_set(_cache_key, result)
+    return result
 
 
 # ── FX response builder ───────────────────────────────────────────────────────

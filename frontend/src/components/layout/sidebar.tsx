@@ -6,11 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
   TrendingUp,
-  Shield,
-  BarChart3,
-  Activity,
-  FileBarChart,
-  Settings2,
   ChevronsUpDown,
   Percent,
   ArrowLeftRight,
@@ -41,16 +36,6 @@ const NAV: NavSection[] = [
       { label: 'Scenario Analysis', href: '/scenario', icon: TrendingUp,     badge: 'LIVE' },
       { label: 'SOFR Forecast',     href: '/sofr',     icon: Percent,        badge: 'NEW'  },
       { label: 'FX Forecast',       href: '/fx',       icon: ArrowLeftRight, badge: 'NEW'  },
-      { label: 'Risk Exposure',     href: '/risk',     icon: Shield },
-      { label: 'Hedge Portfolio',   href: '/hedge',    icon: BarChart3 },
-      { label: 'Market Data',       href: '/market',   icon: Activity },
-    ],
-  },
-  {
-    label: 'System',
-    items: [
-      { label: 'Reports',  href: '/reports',  icon: FileBarChart },
-      { label: 'Settings', href: '/settings', icon: Settings2 },
     ],
   },
 ];
@@ -74,8 +59,8 @@ function NavItem({
         whileHover={{ x: 1 }}
         transition={{ duration: 0.1, ease: 'easeOut' }}
         className={cn(
-          'group relative flex items-center gap-3 rounded-[10px] px-3 py-2.5',
-          'text-[14px] font-medium cursor-pointer select-none',
+          'group relative flex items-center gap-3.5 rounded-[10px] px-3.5 py-3',
+          'text-[15px] font-medium cursor-pointer select-none',
           'transition-colors duration-150',
           isActive
             ? 'text-[#F5D90A]'
@@ -115,7 +100,7 @@ function NavItem({
         {/* Icon */}
         <Icon
           className={cn(
-            'shrink-0 w-[16px] h-[16px] transition-colors duration-150',
+            'shrink-0 w-[17px] h-[17px] transition-colors duration-150',
             isActive
               ? 'text-[#F5D90A]'
               : 'text-[#6B7280] group-hover:text-[#A1A8B3]',
@@ -155,46 +140,46 @@ export function Sidebar() {
     <aside
       className="fixed inset-y-0 left-0 z-50 flex flex-col"
       style={{
-        width:           '260px',
+        width:           '280px',
         backgroundColor: '#111318',
         borderRight:     '1px solid rgba(255,255,255,0.05)',
       }}
     >
       {/* Brand ────────────────────────────────────────────────────────── */}
       <div
-        className="flex h-16 shrink-0 items-center gap-3.5 px-5"
+        className="flex h-[72px] shrink-0 items-center gap-4 px-5"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
       >
         {/* Logo mark */}
         <div
-          className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px]"
+          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]"
           style={{ background: '#F5D90A' }}
         >
-          <span className="text-[13px] font-black leading-none tracking-tight text-black">B</span>
+          <span className="text-[14px] font-black leading-none tracking-tight text-black">B</span>
           {/* Online indicator */}
           <span
-            className="absolute -right-[3px] -top-[3px] h-[8px] w-[8px] rounded-full border-[1.5px]"
+            className="absolute -right-[3px] -top-[3px] h-[9px] w-[9px] rounded-full border-[1.5px]"
             style={{ background: '#22C55E', borderColor: '#111318' }}
           />
         </div>
 
         {/* Wordmark */}
         <div className="flex flex-col gap-1 leading-none">
-          <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#F5F7FA]">
+          <span className="text-[14px] font-bold uppercase tracking-[0.18em] text-[#F5F7FA]">
             BAML
           </span>
-          <span className="text-[11px] text-[#6B7280] tracking-[0.02em]">
+          <span className="text-[12px] text-[#6B7280] tracking-[0.02em]">
             Risk Intelligence
           </span>
         </div>
       </div>
 
       {/* Navigation ───────────────────────────────────────────────────── */}
-      <nav className="scroll-thin flex-1 overflow-y-auto px-3 py-4 space-y-5">
+      <nav className="scroll-thin flex-1 overflow-y-auto px-3 py-5 space-y-6">
         {NAV.map((section) => (
           <div key={section.label}>
             <p
-              className="mb-1.5 px-3 text-[10.5px] font-semibold uppercase tracking-[0.14em]"
+              className="mb-2 px-3.5 text-[11px] font-semibold uppercase tracking-[0.14em]"
               style={{ color: 'rgba(255,255,255,0.22)' }}
             >
               {section.label}
@@ -216,7 +201,7 @@ export function Sidebar() {
         style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
       >
         <button
-          className="group flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 transition-colors duration-150"
+          className="group flex w-full items-center gap-3.5 rounded-[10px] px-3.5 py-3 transition-colors duration-150"
           style={{ background: 'transparent' }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
@@ -224,30 +209,30 @@ export function Sidebar() {
           {/* Avatar */}
           <div className="relative shrink-0">
             <div
-              className="flex h-8 w-8 items-center justify-center rounded-full"
+              className="flex h-9 w-9 items-center justify-center rounded-full"
               style={{
                 background: 'rgba(245,217,10,0.10)',
                 border:     '1px solid rgba(245,217,10,0.18)',
               }}
             >
-              <span className="text-[11px] font-bold leading-none text-[#F5D90A]">TA</span>
+              <span className="text-[12px] font-bold leading-none text-[#F5D90A]">TA</span>
             </div>
             <span
-              className="absolute -bottom-px -right-px h-[9px] w-[9px] rounded-full border-[1.5px]"
+              className="absolute -bottom-px -right-px h-[10px] w-[10px] rounded-full border-[1.5px]"
               style={{ background: '#22C55E', borderColor: '#111318' }}
             />
           </div>
 
           {/* Name */}
-          <div className="flex min-w-0 flex-1 flex-col gap-[3px] text-left leading-none">
-            <span className="truncate text-[13.5px] font-semibold text-[#F5F7FA]">
+          <div className="flex min-w-0 flex-1 flex-col gap-1 text-left leading-none">
+            <span className="truncate text-[14px] font-semibold text-[#F5F7FA]">
               Treasury Analyst
             </span>
-            <span className="text-[11.5px] text-[#6B7280]">EY Advisory</span>
+            <span className="text-[12px] text-[#6B7280]">EY Advisory</span>
           </div>
 
           <ChevronsUpDown
-            className="h-[14px] w-[14px] shrink-0 text-[#6B7280] opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+            className="h-[15px] w-[15px] shrink-0 text-[#6B7280] opacity-0 transition-opacity duration-150 group-hover:opacity-100"
             strokeWidth={1.75}
           />
         </button>

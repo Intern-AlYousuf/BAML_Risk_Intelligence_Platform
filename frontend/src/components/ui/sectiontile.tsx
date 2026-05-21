@@ -37,18 +37,18 @@ export function SectionTitle({
     <div className={cn('flex items-end justify-between gap-4', SPACING[spacing], className)}>
       <div className="space-y-1.5 min-w-0">
         {eyebrow && (
-          <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[#6B7280]">
+          <p className="text-[11.5px] font-semibold uppercase tracking-[0.16em] text-[#6B7280]">
             {eyebrow}
           </p>
         )}
         <Tag
           className="font-semibold text-[#F5F7FA] leading-tight"
-          style={{ fontSize: '18px', letterSpacing: '-0.01em' }}
+          style={{ fontSize: '20px', letterSpacing: '-0.01em' }}
         >
           {title}
         </Tag>
         {subtitle && (
-          <p className="text-[13.5px] text-[#6B7280] leading-none">
+          <p className="text-[14.5px] text-[#6B7280] leading-none">
             {subtitle}
           </p>
         )}

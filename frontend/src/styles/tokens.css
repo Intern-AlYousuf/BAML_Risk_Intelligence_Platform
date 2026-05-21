@@ -53,13 +53,13 @@
   /* ---------------------------------------------------------------------------
      LAYOUT
      --------------------------------------------------------------------------- */
-  --sidebar-w:   260px;
-  --topbar-h:    64px;
-  --page-pad-x:  2.5rem;    /* 40px horizontal page gutter            */
-  --page-pad-y:  2.5rem;    /* 40px vertical page gutter              */
-  --section-gap: 2rem;      /* 32px between page sections             */
+  --sidebar-w:   280px;
+  --topbar-h:    72px;
+  --page-pad-x:  3rem;      /* 48px horizontal page gutter            */
+  --page-pad-y:  3rem;      /* 48px vertical page gutter              */
+  --section-gap: 2.5rem;    /* 40px between page sections             */
   --card-gap:    1.25rem;   /* 20px between cards (spec requirement)  */
-  --card-pad:    2rem;      /* 32px inner card padding                */
+  --card-pad:    2.25rem;   /* 36px inner card padding                */
 
   /* ---------------------------------------------------------------------------
      RADIUS

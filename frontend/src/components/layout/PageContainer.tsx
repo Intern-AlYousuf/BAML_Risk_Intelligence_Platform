@@ -32,7 +32,7 @@ export function PageContainer({
   return (
     <div
       className={cn(
-        'w-full mx-auto px-10 py-10',
+        'w-full mx-auto px-12 py-12',
         MAX_WIDTHS[size],
         className,
       )}

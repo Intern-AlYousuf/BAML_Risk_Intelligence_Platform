@@ -1,6 +1,6 @@
 'use client';
 
-import { useId } from 'react';
+import React, { useId } from 'react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -45,6 +45,8 @@ export interface ForecastChartProps {
   height?:       number;
   /** Whether to render the historical actual line */
   showHistory?:  boolean;
+  /** 'rate' (default) renders values as percentages; 'fx' renders raw exchange-rate numbers */
+  assetType?:    'rate' | 'fx';
   className?:    string;
 }
 
@@ -64,33 +66,63 @@ function fmtTooltipDate(iso: string): string {
   });
 }
 
+export type ValueFormatter = (v: number) => string;
+
+export function formatPercent(v: number): string { return `${v.toFixed(2)}%`; }
+export function formatFxRate(v: number): string   { return v.toFixed(2); }
+
 /* ---------------------------------------------------------------------------
    Tooltip
    --------------------------------------------------------------------------- */
 
 function ForecastTooltip({
-  active, payload, label,
+  active, payload, label, formatValue = formatPercent,
 }: {
-  active?:   boolean;
-  payload?:  Array<{ name: string; value: number }>;
-  label?:    string;
+  active?:       boolean;
+  payload?:      Array<{ name: string; value: number }>;
+  label?:        string;
+  formatValue?:  ValueFormatter;
 }) {
   if (!active || !payload?.length) return null;
+
   const forecast = payload.find(p => p.name === 'forecast');
+  const actual   = payload.find(p => p.name === 'actual');
   const p10      = payload.find(p => p.name === 'p10');
   const p90      = payload.find(p => p.name === 'p90');
 
+  const isHistorical = !!actual && !forecast;
+
+  const tooltipStyle: React.CSSProperties = {
+    background:          'rgba(15,17,20,0.96)',
+    border:              '1px solid rgba(255,255,255,0.08)',
+    backdropFilter:      'blur(16px)',
+    WebkitBackdropFilter:'blur(16px)',
+    boxShadow:           '0 8px 32px rgba(0,0,0,0.5)',
+  };
+
+  if (isHistorical) {
+    return (
+      <div className="rounded-[14px] min-w-[156px] overflow-hidden" style={tooltipStyle}>
+        <div className="px-4 pt-3.5 pb-3">
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.15em] text-[#6B7280] mb-3 leading-none">
+            {label ? fmtTooltipDate(label) : ''}
+          </p>
+          <div className="flex items-baseline justify-between gap-5">
+            <span className="text-[12px] text-[#6B7280]">Historical</span>
+            <span
+              className="text-[17px] font-semibold leading-none"
+              style={{ color: 'rgba(255,255,255,0.52)', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}
+            >
+              {formatValue(actual!.value)}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className="rounded-[14px] min-w-[156px] overflow-hidden"
-      style={{
-        background:          'rgba(15,17,20,0.96)',
-        border:              '1px solid rgba(255,255,255,0.08)',
-        backdropFilter:      'blur(16px)',
-        WebkitBackdropFilter:'blur(16px)',
-        boxShadow:           '0 8px 32px rgba(0,0,0,0.5)',
-      }}
-    >
+    <div className="rounded-[14px] min-w-[156px] overflow-hidden" style={tooltipStyle}>
       <div className="px-4 pt-3.5 pb-3">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.15em] text-[#6B7280] mb-3 leading-none">
           {label ? fmtTooltipDate(label) : ''}
@@ -103,7 +135,7 @@ function ForecastTooltip({
               className="text-[17px] font-semibold leading-none"
               style={{ color: '#F5D90A', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}
             >
-              {forecast.value.toFixed(2)}%
+              {formatValue(forecast.value)}
             </span>
           </div>
         )}
@@ -118,7 +150,7 @@ function ForecastTooltip({
               className="text-[13px] text-[#A1A8B3]"
               style={{ fontVariantNumeric: 'tabular-nums' }}
             >
-              {p10.value.toFixed(2)}–{p90.value.toFixed(2)}%
+              {formatValue(p10.value)}–{formatValue(p90.value)}
             </span>
           </div>
         )}
@@ -135,13 +167,15 @@ export function ForecastChart({
   data,
   tickDates,
   splitDate,
-  height       = 380,
-  showHistory  = true,
+  height      = 380,
+  showHistory = true,
+  assetType   = 'rate',
   className,
 }: ForecastChartProps) {
   const uid = useId().replace(/:/g, '');
   const idOuter = `fo-${uid}`;
   const idInner = `fi-${uid}`;
+  const fmt = assetType === 'fx' ? formatFxRate : formatPercent;
 
   return (
     <div className={cn('w-full h-full', className)}>
@@ -182,7 +216,7 @@ export function ForecastChart({
           />
           <YAxis
             domain={['auto', 'auto']}
-            tickFormatter={(v: number) => `${v.toFixed(2)}%`}
+            tickFormatter={fmt}
             axisLine={false}
             tickLine={false}
             tick={{ fill: 'rgba(255,255,255,0.28)', fontSize: 11.5 }}
@@ -190,7 +224,7 @@ export function ForecastChart({
           />
 
           <Tooltip
-            content={<ForecastTooltip />}
+            content={<ForecastTooltip formatValue={fmt} />}
             cursor={{ stroke: 'rgba(255,255,255,0.06)', strokeWidth: 1 }}
           />
 
@@ -262,12 +296,13 @@ export function ForecastChart({
             <Line
               type="monotone"
               dataKey="actual"
-              stroke="rgba(255,255,255,0.32)"
+              stroke="rgba(255,255,255,0.40)"
               strokeWidth={1.5}
               dot={false}
-              activeDot={false}
+              activeDot={{ r: 4, fill: 'rgba(255,255,255,0.40)', strokeWidth: 0 }}
               name="actual"
               isAnimationActive={false}
+              strokeDasharray="0"
             />
           )}
 

@@ -24,15 +24,15 @@ export interface SegmentedControlProps<T extends string = string> {
 }
 
 const SIZE_TRACK: Record<'sm' | 'md' | 'lg', string> = {
-  sm: 'p-[3px] gap-[2px]',
-  md: 'p-1     gap-[3px]',
-  lg: 'p-1.5   gap-1',
+  sm: 'p-1      gap-[3px]',
+  md: 'p-[5px]  gap-1',
+  lg: 'p-1.5    gap-1.5',
 };
 
 const SIZE_OPTION: Record<'sm' | 'md' | 'lg', string> = {
-  sm: 'px-3   py-1.5  text-[12px] rounded-[6px]',
-  md: 'px-4   py-2    text-[13.5px] rounded-[8px]',
-  lg: 'px-5   py-2.5  text-[15px]  rounded-[10px]',
+  sm: 'px-3.5  py-2    text-[12.5px] rounded-[7px]',
+  md: 'px-5    py-2.5  text-[14px]   rounded-[8px]',
+  lg: 'px-6    py-3    text-[15.5px] rounded-[10px]',
 };
 
 /* ---------------------------------------------------------------------------

@@ -102,7 +102,7 @@ export function InsightCard({
   return (
     <div
       className={cn(
-        'group flex flex-col rounded-[20px] p-7 transition-all duration-200',
+        'group flex flex-col rounded-[20px] p-8 transition-all duration-200',
         featured && 'ring-0',
         className,
       )}
@@ -120,11 +120,11 @@ export function InsightCard({
       <div className="flex items-start gap-4">
         {/* Icon badge */}
         <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105"
           style={{ background: cfg.iconBg }}
         >
           <Icon
-            className="h-[17px] w-[17px]"
+            className="h-[19px] w-[19px]"
             style={{ color: cfg.iconColor }}
             strokeWidth={1.75}
           />
@@ -133,12 +133,12 @@ export function InsightCard({
         {/* Text */}
         <div className="flex-1 min-w-0 pt-0.5">
           <p
-            className="text-[11px] font-bold uppercase tracking-[0.14em] mb-2.5 leading-none"
+            className="text-[12px] font-bold uppercase tracking-[0.14em] mb-3 leading-none"
             style={{ color: cfg.labelColor }}
           >
             {title}
           </p>
-          <p className="text-[14px] leading-[1.65] text-[#A1A8B3]">{body}</p>
+          <p className="text-[14.5px] leading-[1.65] text-[#A1A8B3]">{body}</p>
         </div>
       </div>
     </div>

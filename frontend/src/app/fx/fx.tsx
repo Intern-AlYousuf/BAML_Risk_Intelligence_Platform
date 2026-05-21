@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Download, RefreshCw, AlertTriangle,
+  RefreshCw, AlertTriangle,
   Activity, AlertCircle, ChevronRight,
 } from 'lucide-react';
 
@@ -257,13 +257,13 @@ function PercentilePanel({
     >
       {/* Header */}
       <div
-        className="px-8 pt-7 pb-5"
+        className="px-8 pt-8 pb-6"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
       >
-        <p className="text-[16px] font-semibold text-[#F5F7FA] leading-none tracking-tight">
+        <p className="text-[17px] font-semibold text-[#F5F7FA] leading-none tracking-tight">
           Scenario Percentiles
         </p>
-        <p className="mt-1.5 text-[13px] text-[#6B7280]">
+        <p className="mt-2 text-[13.5px] text-[#6B7280]">
           Terminal {PAIR_LABELS[pair]} · {horizon} horizon
         </p>
       </div>
@@ -294,18 +294,18 @@ function PercentilePanel({
                 />
                 <div>
                   <p
-                    className="text-[13.5px] font-semibold leading-none"
+                    className="text-[14.5px] font-semibold leading-none"
                     style={{ color: featured ? '#F5D90A' : '#A1A8B3' }}
                   >
                     {label}
                     <span
-                      className="ml-2 font-normal text-[12px]"
+                      className="ml-2 font-normal text-[12.5px]"
                       style={{ color: 'rgba(255,255,255,0.28)' }}
                     >
                       {desc}
                     </span>
                   </p>
-                  <p className="mt-1.5 text-[11.5px] text-[#374151]">{note}</p>
+                  <p className="mt-1.5 text-[12px] text-[#374151]">{note}</p>
                 </div>
               </div>
 
@@ -324,7 +324,7 @@ function PercentilePanel({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -2 }}
                     transition={{ duration: 0.15 }}
-                    className="text-[17px] font-semibold leading-none"
+                    className="text-[19px] font-semibold leading-none"
                     style={{
                       color:              featured ? '#F5D90A' : '#F5F7FA',
                       fontVariantNumeric: 'tabular-nums',
@@ -364,6 +364,7 @@ export default function FXPage() {
   const {
     chartData,
     forecastTickDates,
+    splitDate,
     distributionData,
     percentileValues,
     baseRateRange,
@@ -390,20 +391,20 @@ export default function FXPage() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
-          className="flex items-end justify-between mb-12"
+          className="flex items-end justify-between mb-14"
         >
           {/* Title block */}
-          <div className="space-y-2.5">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.20em] text-[#6B7280]">
+          <div className="space-y-3">
+            <p className="text-[11.5px] font-semibold uppercase tracking-[0.20em] text-[#6B7280]">
               FX Analytics
             </p>
             <h1
               className="font-semibold text-[#F5F7FA] leading-none"
-              style={{ fontSize: '42px', letterSpacing: '-0.03em' }}
+              style={{ fontSize: '50px', letterSpacing: '-0.03em' }}
             >
               FX Forecast
             </h1>
-            <p className="text-[14px] text-[#6B7280] leading-none">
+            <p className="text-[15px] text-[#6B7280] leading-none">
               Monte Carlo ensemble &middot; {nSims.toLocaleString()} simulations &middot; {today}
             </p>
           </div>
@@ -445,13 +446,6 @@ export default function FXPage() {
               loading={loading}
             >
               Refresh
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              iconLeft={<Download className="h-3.5 w-3.5" strokeWidth={1.75} />}
-            >
-              Export
             </Button>
           </div>
         </motion.div>
@@ -508,7 +502,7 @@ export default function FXPage() {
               title={`${pairLabel} Rate Trajectory · ${horizon}`}
               subtitle={`Exchange rate forecast · Confidence bands from ${nSims.toLocaleString()} Monte Carlo paths`}
               legend={FORECAST_LEGEND}
-              height={480}
+              height={520}
               loading={loading && !chartData.length}
               actions={
                 <div
@@ -523,8 +517,10 @@ export default function FXPage() {
               <ForecastChart
                 data={chartData}
                 tickDates={forecastTickDates}
-                height={440}
-                showHistory={false}
+                splitDate={splitDate ?? undefined}
+                height={480}
+                showHistory
+                assetType="fx"
               />
             </ChartCard>
           </motion.div>
@@ -594,7 +590,7 @@ export default function FXPage() {
             <ChartCard
               title={`Outcome Distribution · ${horizon}`}
               subtitle={`Terminal ${pairLabel} probability mass · ${nSims.toLocaleString()} paths`}
-              height={360}
+              height={400}
               loading={loading && !distributionData.length}
               actions={
                 <div
@@ -610,7 +606,7 @@ export default function FXPage() {
                 data={distributionData}
                 baseRange={baseRateRange.low ? baseRateRange : undefined}
                 assetLabel={pairLabel}
-                height={320}
+                height={360}
               />
             </ChartCard>
 
