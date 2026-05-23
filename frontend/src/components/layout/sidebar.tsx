@@ -10,6 +10,7 @@ import {
   Percent,
   ArrowLeftRight,
   Network,
+  BarChart2,
 } from 'lucide-react';
 import { cn } from '../../lib/theme';
 
@@ -38,7 +39,13 @@ const NAV: NavSection[] = [
   {
     label: 'Treasury',
     items: [
-      { label: 'Netting TMS',       href: '/tms',      icon: Network,        badge: 'NEW'  },
+      { label: 'Netting TMS',             href: '/tms',       icon: Network,   badge: 'NEW'  },
+    ],
+  },
+  {
+    label: 'Commodities',
+    items: [
+      { label: 'Commodity Volatility',    href: '/commodity', icon: BarChart2, badge: 'NEW'  },
     ],
   },
 ];
