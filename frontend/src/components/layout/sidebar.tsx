@@ -12,14 +12,10 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/theme';
 
-/* ---------------------------------------------------------------------------
-   Nav data
-   --------------------------------------------------------------------------- */
-
 type NavItem = {
-  label: string;
-  href:  string;
-  icon:  React.ElementType;
+  label:  string;
+  href:   string;
+  icon:   React.ElementType;
   badge?: string;
 };
 
@@ -40,17 +36,7 @@ const NAV: NavSection[] = [
   },
 ];
 
-/* ---------------------------------------------------------------------------
-   NavItem
-   --------------------------------------------------------------------------- */
-
-function NavItem({
-  item,
-  isActive,
-}: {
-  item: NavItem;
-  isActive: boolean;
-}) {
+function NavItem({ item, isActive }: { item: NavItem; isActive: boolean }) {
   const Icon = item.icon;
 
   return (
@@ -59,36 +45,28 @@ function NavItem({
         whileHover={{ x: 1 }}
         transition={{ duration: 0.1, ease: 'easeOut' }}
         className={cn(
-          'group relative flex items-center gap-3.5 rounded-[10px] px-3.5 py-3',
-          'text-[15px] font-medium cursor-pointer select-none',
+          'group relative flex items-center gap-3.5 rounded-[4px] px-3.5 py-2.5',
+          'text-[14px] font-medium cursor-pointer select-none',
           'transition-colors duration-150',
-          isActive
-            ? 'text-[#F5D90A]'
-            : 'text-[#A1A8B3] hover:text-[#F5F7FA]',
+          isActive ? 'text-[#111111]' : 'text-[#555555] hover:text-[#111111]',
         )}
         style={{
-          background: isActive
-            ? 'rgba(245,217,10,0.09)'
-            : undefined,
+          background: isActive ? 'rgba(255,230,0,0.18)' : undefined,
         }}
         onMouseEnter={e => {
-          if (!isActive) {
-            (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)';
-          }
+          if (!isActive) (e.currentTarget as HTMLElement).style.background = '#F0F0EE';
         }}
         onMouseLeave={e => {
-          if (!isActive) {
-            (e.currentTarget as HTMLElement).style.background = '';
-          }
+          if (!isActive) (e.currentTarget as HTMLElement).style.background = '';
         }}
       >
-        {/* Active left pill */}
+        {/* Active left accent bar */}
         <AnimatePresence>
           {isActive && (
             <motion.span
               layoutId="nav-active"
-              className="absolute left-0 top-[7px] bottom-[7px] w-[3px] rounded-r-full"
-              style={{ background: '#F5D90A' }}
+              className="absolute left-0 top-[6px] bottom-[6px] w-[3px] rounded-r-full"
+              style={{ background: '#FFE600' }}
               initial={{ opacity: 0, scaleY: 0.4 }}
               animate={{ opacity: 1, scaleY: 1 }}
               exit={{ opacity: 0, scaleY: 0.4 }}
@@ -97,28 +75,23 @@ function NavItem({
           )}
         </AnimatePresence>
 
-        {/* Icon */}
         <Icon
           className={cn(
-            'shrink-0 w-[17px] h-[17px] transition-colors duration-150',
-            isActive
-              ? 'text-[#F5D90A]'
-              : 'text-[#6B7280] group-hover:text-[#A1A8B3]',
+            'shrink-0 w-[16px] h-[16px] transition-colors duration-150',
+            isActive ? 'text-[#111111]' : 'text-[#888888] group-hover:text-[#555555]',
           )}
           strokeWidth={isActive ? 2 : 1.75}
         />
 
-        {/* Label */}
         <span className="flex-1 leading-none">{item.label}</span>
 
-        {/* Badge */}
         {item.badge && (
           <span
-            className="inline-flex items-center px-[6px] py-[3px] rounded-full text-[9.5px] font-bold tracking-[0.06em] leading-none uppercase"
+            className="inline-flex items-center px-[5px] py-[2.5px] rounded-[3px] text-[9px] font-bold tracking-[0.08em] leading-none uppercase"
             style={
               isActive
-                ? { background: 'rgba(245,217,10,0.18)', color: '#F5D90A', border: '1px solid rgba(245,217,10,0.30)' }
-                : { background: 'rgba(245,217,10,0.07)', color: '#A89208', border: '1px solid rgba(245,217,10,0.14)' }
+                ? { background: 'rgba(255,230,0,0.25)', color: '#967A00', border: '1px solid rgba(255,230,0,0.40)' }
+                : { background: '#F0F0EE', color: '#888888', border: '1px solid #D8D8D8' }
             }
           >
             {item.badge}
@@ -129,10 +102,6 @@ function NavItem({
   );
 }
 
-/* ---------------------------------------------------------------------------
-   Sidebar — 260px fixed, full viewport height
-   --------------------------------------------------------------------------- */
-
 export function Sidebar() {
   const pathname = usePathname();
 
@@ -141,50 +110,48 @@ export function Sidebar() {
       className="fixed inset-y-0 left-0 z-50 flex flex-col"
       style={{
         width:           '280px',
-        backgroundColor: '#111318',
-        borderRight:     '1px solid rgba(255,255,255,0.05)',
+        backgroundColor: '#FFFFFF',
+        borderRight:     '1px solid #D8D8D8',
       }}
     >
-      {/* Brand ────────────────────────────────────────────────────────── */}
+      {/* Brand */}
       <div
         className="flex h-[72px] shrink-0 items-center gap-4 px-5"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+        style={{ borderBottom: '1px solid #D8D8D8' }}
       >
         {/* Logo mark */}
         <div
-          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]"
-          style={{ background: '#F5D90A' }}
+          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px]"
+          style={{ background: '#FFE600', border: '1px solid #D4B800' }}
         >
           <span className="text-[14px] font-black leading-none tracking-tight text-black">B</span>
-          {/* Online indicator */}
           <span
-            className="absolute -right-[3px] -top-[3px] h-[9px] w-[9px] rounded-full border-[1.5px]"
-            style={{ background: '#22C55E', borderColor: '#111318' }}
+            className="absolute -right-[3px] -top-[3px] h-[8px] w-[8px] rounded-full border-[1.5px]"
+            style={{ background: '#16A34A', borderColor: '#FFFFFF' }}
           />
         </div>
 
         {/* Wordmark */}
         <div className="flex flex-col gap-1 leading-none">
-          <span className="text-[14px] font-bold uppercase tracking-[0.18em] text-[#F5F7FA]">
+          <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#111111]">
             BAML
           </span>
-          <span className="text-[12px] text-[#6B7280] tracking-[0.02em]">
+          <span className="text-[11.5px] text-[#888888] tracking-[0.02em]">
             Risk Intelligence
           </span>
         </div>
       </div>
 
-      {/* Navigation ───────────────────────────────────────────────────── */}
-      <nav className="scroll-thin flex-1 overflow-y-auto px-3 py-5 space-y-6">
+      {/* Navigation */}
+      <nav className="scroll-thin flex-1 overflow-y-auto px-3 py-5 space-y-5">
         {NAV.map((section) => (
           <div key={section.label}>
             <p
-              className="mb-2 px-3.5 text-[11px] font-semibold uppercase tracking-[0.14em]"
-              style={{ color: 'rgba(255,255,255,0.22)' }}
+              className="mb-2 px-3.5 text-[10.5px] font-bold uppercase tracking-[0.16em] text-[#BBBBBB]"
             >
               {section.label}
             </p>
-            <ul className="space-y-[1px]">
+            <ul className="space-y-px">
               {section.items.map((item) => (
                 <li key={item.href}>
                   <NavItem item={item} isActive={pathname === item.href} />
@@ -195,44 +162,40 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* User footer ──────────────────────────────────────────────────── */}
+      {/* User footer */}
       <div
         className="shrink-0 p-3"
-        style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+        style={{ borderTop: '1px solid #D8D8D8' }}
       >
         <button
-          className="group flex w-full items-center gap-3.5 rounded-[10px] px-3.5 py-3 transition-colors duration-150"
+          className="group flex w-full items-center gap-3.5 rounded-[4px] px-3.5 py-2.5 transition-colors duration-150"
           style={{ background: 'transparent' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#F0F0EE'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
         >
           {/* Avatar */}
           <div className="relative shrink-0">
             <div
-              className="flex h-9 w-9 items-center justify-center rounded-full"
-              style={{
-                background: 'rgba(245,217,10,0.10)',
-                border:     '1px solid rgba(245,217,10,0.18)',
-              }}
+              className="flex h-8 w-8 items-center justify-center rounded-full"
+              style={{ background: '#FFE600', border: '1px solid #D4B800' }}
             >
-              <span className="text-[12px] font-bold leading-none text-[#F5D90A]">TA</span>
+              <span className="text-[11px] font-black leading-none text-black">TA</span>
             </div>
             <span
-              className="absolute -bottom-px -right-px h-[10px] w-[10px] rounded-full border-[1.5px]"
-              style={{ background: '#22C55E', borderColor: '#111318' }}
+              className="absolute -bottom-px -right-px h-[9px] w-[9px] rounded-full border-[1.5px]"
+              style={{ background: '#16A34A', borderColor: '#FFFFFF' }}
             />
           </div>
 
-          {/* Name */}
           <div className="flex min-w-0 flex-1 flex-col gap-1 text-left leading-none">
-            <span className="truncate text-[14px] font-semibold text-[#F5F7FA]">
+            <span className="truncate text-[13.5px] font-semibold text-[#111111]">
               Treasury Analyst
             </span>
-            <span className="text-[12px] text-[#6B7280]">EY Advisory</span>
+            <span className="text-[11.5px] text-[#888888]">EY Advisory</span>
           </div>
 
           <ChevronsUpDown
-            className="h-[15px] w-[15px] shrink-0 text-[#6B7280] opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+            className="h-[14px] w-[14px] shrink-0 text-[#BBBBBB] opacity-0 transition-opacity duration-150 group-hover:opacity-100"
             strokeWidth={1.75}
           />
         </button>

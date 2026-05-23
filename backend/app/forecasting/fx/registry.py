@@ -44,14 +44,21 @@ class FXPairConfig:
     annualized_vol_cap:
         Soft cap on annualised volatility used to detect simulation blow-up.
         Not enforced as a hard constraint — logged as a warning only.
+    target_terminal_rate:
+        Optional directional drift target for the full forecast horizon.
+        When set, a smooth geometric drift overlay is applied to both the
+        deterministic ARIMA forecast and every Monte Carlo path so that the
+        P50 terminal value converges toward this rate.  ``None`` disables
+        the overlay (all other pairs remain unaffected).
     """
-    pair_id:           str
-    display_name:      str
-    yahoo_symbol:      str
-    floor:             float
-    ceiling:           float
-    preferred_order:   tuple[int, int, int] | None = None
-    annualized_vol_cap: float = 0.50          # 50% ann. vol — sanity-check threshold
+    pair_id:              str
+    display_name:         str
+    yahoo_symbol:         str
+    floor:                float
+    ceiling:              float
+    preferred_order:      tuple[int, int, int] | None = None
+    annualized_vol_cap:   float       = 0.50   # 50% ann. vol — sanity-check threshold
+    target_terminal_rate: float | None = None  # drift overlay target (level, e.g. 101.0)
 
 
 # ── Pair registry ─────────────────────────────────────────────────────────────
@@ -70,13 +77,14 @@ FX_PAIR_REGISTRY: dict[str, FXPairConfig] = {
         annualized_vol_cap = 1.00,   # NGN can be very volatile
     ),
     "INRUSD": FXPairConfig(
-        pair_id           = "INRUSD",
-        display_name      = "USD/INR",
-        yahoo_symbol      = "USDINR=X",
-        floor             = 60.0,
-        ceiling           = 120.0,
-        preferred_order   = (1, 0, 1),
-        annualized_vol_cap = 0.30,
+        pair_id               = "INRUSD",
+        display_name          = "USD/INR",
+        yahoo_symbol          = "USDINR=X",
+        floor                 = 60.0,
+        ceiling               = 120.0,
+        preferred_order       = (1, 0, 1),
+        annualized_vol_cap    = 0.30,
+        target_terminal_rate  = 101.0,   # ~5.2% annualised drift over 12-month horizon
     ),
     "EURINR": FXPairConfig(
         pair_id           = "EURINR",

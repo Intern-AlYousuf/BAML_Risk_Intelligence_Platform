@@ -4,32 +4,18 @@ import { motion } from 'framer-motion';
 import { Sidebar } from './sidebar';
 import { Topbar, type TopbarProps } from './topbar';
 
-/* ---------------------------------------------------------------------------
-   Props
-   --------------------------------------------------------------------------- */
-
 export interface AppShellProps extends TopbarProps {
   children: React.ReactNode;
 }
 
-/* ---------------------------------------------------------------------------
-   AppShell
-   Positions the 260px sidebar + 64px topbar + scrollable content area.
-   Children can be server or client components — they are passed as props,
-   not imported, so they retain their own rendering mode.
-   --------------------------------------------------------------------------- */
-
 export function AppShell({ children, breadcrumb, title }: AppShellProps) {
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#0B0B0C' }}>
+    <div className="min-h-screen" style={{ backgroundColor: '#F7F7F5' }}>
 
-      {/* Fixed sidebar */}
       <Sidebar />
 
-      {/* Fixed topbar — inset-left tracks sidebar width */}
       <Topbar breadcrumb={breadcrumb} title={title} />
 
-      {/* Scrollable content — offsets match sidebar (280px) + topbar (72px) */}
       <main
         className="min-h-screen"
         style={{ marginLeft: '280px', paddingTop: '72px' }}

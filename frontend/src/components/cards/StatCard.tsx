@@ -13,24 +13,15 @@ export type StatAccent   = 'yellow' | 'green' | 'red' | 'amber' | 'blue' | 'none
 export type StatSize     = 'sm' | 'md' | 'lg';
 
 export interface StatCardProps {
-  /** Compact upper label — e.g. "Projected SOFR · 12M" */
   label:          string;
-  /** Primary KPI value — e.g. "4.38" */
   value:          string | number;
-  /** Unit appended/prepended to value */
   unit?:          string;
   unitPosition?:  'prefix' | 'suffix';
-  /** Delta row — e.g. "+0.12 bps" or "P10 – P90 spread" */
   delta?:         string;
-  /** Secondary annotation below delta */
   annotation?:    string;
-  /** Colours the delta pill and top accent bar */
   signal?:        StatSignal;
-  /** Top-of-card colour bar */
   accent?:        StatAccent;
-  /** Yellow featured variant — larger KPI, yellow tint surface */
   featured?:      boolean;
-  /** Skeleton loading state */
   loading?:       boolean;
   size?:          StatSize;
   className?:     string;
@@ -38,15 +29,15 @@ export interface StatCardProps {
 }
 
 /* ---------------------------------------------------------------------------
-   Design maps
+   Design maps — light theme
    --------------------------------------------------------------------------- */
 
 const ACCENT_BAR: Record<StatAccent, string> = {
-  yellow: '#F5D90A',
-  green:  '#22C55E',
-  red:    '#EF4444',
-  amber:  '#F59E0B',
-  blue:   '#3B82F6',
+  yellow: '#FFE600',
+  green:  '#16A34A',
+  red:    '#DC2626',
+  amber:  '#D97706',
+  blue:   '#2563EB',
   none:   'transparent',
 };
 
@@ -56,10 +47,10 @@ const SIGNAL_CONFIG: Record<StatSignal, {
   border: string;
   Icon:   React.ElementType;
 }> = {
-  positive: { text: '#22C55E', bg: 'rgba(34,197,94,0.10)',  border: 'rgba(34,197,94,0.22)',  Icon: TrendingUp   },
-  negative: { text: '#EF4444', bg: 'rgba(239,68,68,0.10)',  border: 'rgba(239,68,68,0.22)',  Icon: TrendingDown },
-  warning:  { text: '#F59E0B', bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.22)', Icon: TrendingUp   },
-  neutral:  { text: '#6B7280', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.09)', Icon: Minus      },
+  positive: { text: '#16A34A', bg: 'rgba(22,163,74,0.08)',   border: 'rgba(22,163,74,0.20)',   Icon: TrendingUp   },
+  negative: { text: '#DC2626', bg: 'rgba(220,38,38,0.08)',   border: 'rgba(220,38,38,0.20)',   Icon: TrendingDown },
+  warning:  { text: '#D97706', bg: 'rgba(217,119,6,0.08)',   border: 'rgba(217,119,6,0.20)',   Icon: TrendingUp   },
+  neutral:  { text: '#888888', bg: 'rgba(0,0,0,0.04)',       border: '#D8D8D8',                Icon: Minus        },
 };
 
 const SIZE_CONFIG: Record<StatSize, {
@@ -70,13 +61,13 @@ const SIZE_CONFIG: Record<StatSize, {
   deltaSize:  string;
   minHeight:  string;
 }> = {
-  sm: { pad: 'px-7 pt-7 pb-6',   label: 'text-[12px]',   valueSize: 'text-[2.75rem]', unitSize: 'text-[1.2rem]',  deltaSize: 'text-[13px]',   minHeight: 'min-h-[170px]' },
-  md: { pad: 'px-8 pt-8 pb-7',   label: 'text-[12.5px]', valueSize: 'text-[3.25rem]', unitSize: 'text-[1.5rem]',  deltaSize: 'text-[14px]',   minHeight: 'min-h-[210px]' },
-  lg: { pad: 'px-9 pt-9 pb-8',   label: 'text-[13px]',   valueSize: 'text-[4rem]',    unitSize: 'text-[1.8rem]',  deltaSize: 'text-[14.5px]', minHeight: 'min-h-[240px]' },
+  sm: { pad: 'px-6 pt-6 pb-5',   label: 'text-[11px]',   valueSize: 'text-[2.5rem]',  unitSize: 'text-[1.1rem]',  deltaSize: 'text-[12px]',   minHeight: 'min-h-[160px]' },
+  md: { pad: 'px-7 pt-7 pb-6',   label: 'text-[11.5px]', valueSize: 'text-[3rem]',    unitSize: 'text-[1.4rem]',  deltaSize: 'text-[13px]',   minHeight: 'min-h-[200px]' },
+  lg: { pad: 'px-8 pt-8 pb-7',   label: 'text-[12px]',   valueSize: 'text-[3.75rem]', unitSize: 'text-[1.7rem]',  deltaSize: 'text-[13.5px]', minHeight: 'min-h-[230px]' },
 };
 
 /* ---------------------------------------------------------------------------
-   StatCard
+   StatCard — EY light institutional style
    --------------------------------------------------------------------------- */
 
 export function StatCard({
@@ -94,15 +85,14 @@ export function StatCard({
   className,
   onClick,
 }: StatCardProps) {
-  const sz       = SIZE_CONFIG[size];
-  const sig      = SIGNAL_CONFIG[signal];
-  const accentBg = ACCENT_BAR[accent];
+  const sz          = SIZE_CONFIG[size];
+  const sig         = SIGNAL_CONFIG[signal];
+  const accentBg    = ACCENT_BAR[accent];
   const isClickable = !!onClick;
 
-  const cardStyle: React.CSSProperties = {
-    background: featured ? 'rgba(245,217,10,0.05)' : '#15171C',
-    border:     featured ? '1px solid rgba(245,217,10,0.14)' : '1px solid rgba(255,255,255,0.06)',
-  };
+  const cardStyle: React.CSSProperties = featured
+    ? { background: 'rgba(255,230,0,0.06)', border: '1px solid rgba(255,230,0,0.30)', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }
+    : { background: '#FFFFFF', border: '1px solid #D8D8D8', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' };
 
   return (
     <motion.div
@@ -110,7 +100,7 @@ export function StatCard({
       transition={{ duration: 0.14, ease: 'easeOut' }}
       onClick={onClick}
       className={cn(
-        'relative flex flex-col overflow-hidden rounded-[20px]',
+        'relative flex flex-col overflow-hidden rounded-[8px]',
         'transition-all duration-150',
         sz.minHeight,
         isClickable && 'cursor-pointer',
@@ -118,10 +108,10 @@ export function StatCard({
       )}
       style={cardStyle}
     >
-      {/* Top accent bar — 2px, full width */}
+      {/* Top accent bar — 3px, full width */}
       {accent !== 'none' && (
         <div
-          className="absolute inset-x-0 top-0 h-[2px] rounded-t-[20px]"
+          className="absolute inset-x-0 top-0 h-[3px]"
           style={{ background: accentBg }}
         />
       )}
@@ -148,9 +138,9 @@ export function StatCard({
 
             {/* Label */}
             <p className={cn(
-              'font-semibold uppercase leading-none tracking-[0.13em]',
+              'font-bold uppercase leading-none tracking-[0.14em]',
               sz.label,
-              featured ? 'text-[#A89208]' : 'text-[#6B7280]',
+              featured ? 'text-[#967A00]' : 'text-[#888888]',
             )}>
               {label}
             </p>
@@ -158,7 +148,7 @@ export function StatCard({
             {/* Value row */}
             <div className="mt-auto flex items-baseline gap-1.5 pt-5">
               {unit && unitPosition === 'prefix' && (
-                <span className={cn('font-medium leading-none', sz.unitSize, 'text-[#6B7280]')}>
+                <span className={cn('font-medium leading-none text-[#888888]', sz.unitSize)}>
                   {unit}
                 </span>
               )}
@@ -170,12 +160,12 @@ export function StatCard({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-                  className={cn('font-semibold leading-none', sz.valueSize)}
+                  className={cn('font-bold leading-none', sz.valueSize)}
                   style={{
-                    color:              featured ? '#F5D90A' : '#F5F7FA',
-                    fontVariantNumeric: 'tabular-nums',
+                    color:               featured ? '#967A00' : '#111111',
+                    fontVariantNumeric:  'tabular-nums',
                     fontFeatureSettings: '"tnum" 1',
-                    letterSpacing:      '-0.025em',
+                    letterSpacing:       '-0.03em',
                   }}
                 >
                   {value}
@@ -183,7 +173,7 @@ export function StatCard({
               </AnimatePresence>
 
               {unit && unitPosition === 'suffix' && (
-                <span className={cn('font-medium leading-none', sz.unitSize, 'text-[#6B7280]')}>
+                <span className={cn('font-medium leading-none text-[#888888]', sz.unitSize)}>
                   {unit}
                 </span>
               )}
@@ -195,7 +185,7 @@ export function StatCard({
                 {delta && (
                   <span
                     className={cn(
-                      'inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 leading-none font-semibold',
+                      'inline-flex items-center gap-1 rounded-[4px] border px-2.5 py-1.5 leading-none font-semibold',
                       sz.deltaSize,
                     )}
                     style={{
@@ -209,7 +199,7 @@ export function StatCard({
                   </span>
                 )}
                 {annotation && (
-                  <span className={cn('leading-none', sz.deltaSize, 'text-[#6B7280]')}>
+                  <span className={cn('leading-none text-[#888888]', sz.deltaSize)}>
                     {annotation}
                   </span>
                 )}
@@ -220,10 +210,9 @@ export function StatCard({
         )}
       </AnimatePresence>
 
-      {/* Focus ring for accessible interactive cards */}
       {isClickable && (
         <span
-          className="pointer-events-none absolute inset-0 rounded-[20px] opacity-0 ring-2 ring-[#F5D90A] transition-opacity focus-visible:opacity-100"
+          className="pointer-events-none absolute inset-0 rounded-[8px] opacity-0 ring-2 ring-[#FFE600] transition-opacity focus-visible:opacity-100"
           aria-hidden
         />
       )}

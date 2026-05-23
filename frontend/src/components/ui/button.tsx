@@ -4,29 +4,21 @@ import { forwardRef } from 'react';
 import { motion, type HTMLMotionProps } from 'framer-motion';
 import { cn } from '../../lib/theme';
 
-/* ---------------------------------------------------------------------------
-   Variants
-   --------------------------------------------------------------------------- */
-
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type ButtonSize    = 'sm' | 'md' | 'lg';
 
 const VARIANT_STYLES: Record<ButtonVariant, string> = {
-  primary:   'bg-[#F5D90A] text-black border-[#F5D90A] hover:bg-[#E8CC08] hover:border-[#E8CC08]',
-  secondary: 'bg-transparent text-[#F5F7FA] border-[rgba(255,255,255,0.10)] hover:bg-[rgba(255,255,255,0.05)] hover:border-[rgba(255,255,255,0.16)]',
-  ghost:     'bg-transparent text-[#A1A8B3] border-transparent hover:bg-[rgba(255,255,255,0.05)] hover:text-[#F5F7FA]',
-  danger:    'bg-transparent text-[#EF4444] border-[rgba(239,68,68,0.25)] hover:bg-[rgba(239,68,68,0.08)]',
+  primary:   'bg-[#FFE600] text-black border-[#D4B800] hover:bg-[#F5DC00] hover:border-[#C9A800] font-semibold',
+  secondary: 'bg-white text-[#111111] border-[#D8D8D8] hover:bg-[#F0F0EE] hover:border-[#B8B8B6]',
+  ghost:     'bg-transparent text-[#555555] border-transparent hover:bg-[#F0F0EE] hover:text-[#111111]',
+  danger:    'bg-transparent text-[#DC2626] border-[rgba(220,38,38,0.25)] hover:bg-[rgba(220,38,38,0.06)]',
 };
 
 const SIZE_STYLES: Record<ButtonSize, string> = {
-  sm: 'h-9  px-4  text-[13px]   rounded-[9px]  gap-1.5',
-  md: 'h-10 px-5  text-[14px]   rounded-[10px] gap-2',
-  lg: 'h-12 px-7  text-[15.5px] rounded-[12px] gap-2.5',
+  sm: 'h-8   px-3.5 text-[12.5px] rounded-[4px] gap-1.5',
+  md: 'h-9   px-4.5 text-[13.5px] rounded-[4px] gap-2',
+  lg: 'h-11  px-6   text-[15px]   rounded-[4px] gap-2.5',
 };
-
-/* ---------------------------------------------------------------------------
-   Props
-   --------------------------------------------------------------------------- */
 
 export interface ButtonProps
   extends Omit<HTMLMotionProps<'button'>, 'children'> {
@@ -38,10 +30,6 @@ export interface ButtonProps
   children?:  React.ReactNode;
   className?: string;
 }
-
-/* ---------------------------------------------------------------------------
-   Button
-   --------------------------------------------------------------------------- */
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
@@ -80,7 +68,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {loading ? (
           <span
-            className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin"
+            className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
             aria-hidden
           />
         ) : (

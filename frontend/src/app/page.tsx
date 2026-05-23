@@ -39,14 +39,14 @@ function MiniSparkline({ data, uid }: { data: ForecastPoint[]; uid: string }) {
       <AreaChart data={sampled} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
         <defs>
           <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="#F5D90A" stopOpacity={0.22} />
-            <stop offset="100%" stopColor="#F5D90A" stopOpacity={0.01} />
+            <stop offset="0%"   stopColor="#E6B800" stopOpacity={0.22} />
+            <stop offset="100%" stopColor="#E6B800" stopOpacity={0.01} />
           </linearGradient>
         </defs>
         <Area
           type="monotone"
           dataKey="forecast"
-          stroke="#F5D90A"
+          stroke="#E6B800"
           strokeWidth={1.5}
           fill={`url(#${gid})`}
           dot={false}
@@ -81,11 +81,11 @@ function ForecastSummaryCard({
 
   return (
     <div
-      className="flex flex-col rounded-[20px] overflow-hidden"
-      style={{ background: '#15171C', border: '1px solid rgba(255,255,255,0.06)' }}
+      className="flex flex-col rounded-[8px] overflow-hidden"
+      style={{ background: '#FFFFFF', border: '1px solid #D8D8D8' }}
     >
       <div className="px-7 pt-7 pb-3">
-        <p className="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-[#6B7280] leading-none">
+        <p className="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-[#888888] leading-none">
           {title}
         </p>
         {loading ? (
@@ -95,14 +95,14 @@ function ForecastSummaryCard({
             <span
               className="font-semibold leading-none"
               style={{
-                fontSize: '2.25rem', color: '#F5D90A',
+                fontSize: '2.25rem', color: '#E6B800',
                 fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.025em',
               }}
             >
               {value}
             </span>
             {unit && (
-              <span className="text-[1.1rem] font-medium leading-none text-[#6B7280]">{unit}</span>
+              <span className="text-[1.1rem] font-medium leading-none text-[#888888]">{unit}</span>
             )}
           </div>
         )}
@@ -117,18 +117,18 @@ function ForecastSummaryCard({
 
       <div
         className="grid grid-cols-2 gap-4 px-7 py-4"
-        style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
+        style={{ borderTop: '1px solid #F0F0EE' }}
       >
         {volLabel && (
           <div>
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.10em] text-[#374151]">Volatility</p>
-            <p className="text-[13.5px] font-semibold text-[#A1A8B3] mt-0.5 tabular-nums">{volLabel}</p>
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.10em] text-[#888888]">Volatility</p>
+            <p className="text-[13.5px] font-semibold text-[#555555] mt-0.5 tabular-nums">{volLabel}</p>
           </div>
         )}
         {confidence && (
           <div>
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.10em] text-[#374151]">Confidence</p>
-            <p className="text-[13.5px] font-semibold text-[#A1A8B3] mt-0.5 tabular-nums">{confidence}%</p>
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.10em] text-[#888888]">Confidence</p>
+            <p className="text-[13.5px] font-semibold text-[#555555] mt-0.5 tabular-nums">{confidence}%</p>
           </div>
         )}
       </div>
@@ -136,7 +136,7 @@ function ForecastSummaryCard({
       <Link
         href={href}
         className="flex items-center justify-between px-7 py-4 text-[12.5px] font-semibold text-[#A89208] hover:text-[#F5D90A] transition-colors duration-150"
-        style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+        style={{ borderTop: '1px solid #E5E5E3' }}
       >
         <span>Open Forecast</span>
         <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.75} />
@@ -152,17 +152,17 @@ function ForecastSummaryCard({
 function InterpretationPanel({ insights }: { insights: string[] }) {
   return (
     <div
-      className="flex flex-col rounded-[20px] overflow-hidden"
-      style={{ background: '#15171C', border: '1px solid rgba(255,255,255,0.06)' }}
+      className="flex flex-col rounded-[8px] overflow-hidden"
+      style={{ background: '#FFFFFF', border: '1px solid #D8D8D8' }}
     >
-      <div className="px-9 pt-8 pb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6B7280]">
+      <div className="px-9 pt-8 pb-5" style={{ borderBottom: '1px solid #E5E5E3' }}>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#888888]">
           Treasury Intelligence
         </p>
-        <p className="mt-2 text-[17px] font-semibold text-[#F5F7FA] leading-tight tracking-tight">
+        <p className="mt-2 text-[17px] font-semibold text-[#111111] leading-tight tracking-tight">
           Market Interpretation
         </p>
-        <p className="mt-1.5 text-[13px] text-[#6B7280]">
+        <p className="mt-1.5 text-[13px] text-[#888888]">
           Deterministic signals derived from live forecast data
         </p>
       </div>
@@ -172,17 +172,17 @@ function InterpretationPanel({ insights }: { insights: string[] }) {
           <div key={i} className="flex items-start gap-3.5">
             <span
               className="h-[6px] w-[6px] rounded-full shrink-0 mt-[7px]"
-              style={{ background: '#F5D90A' }}
+              style={{ background: '#E6B800' }}
             />
-            <p className="text-[13.5px] text-[#A1A8B3] leading-[1.65]">{text}</p>
+            <p className="text-[13.5px] text-[#555555] leading-[1.65]">{text}</p>
           </div>
         ))}
       </div>
 
-      <div className="px-9 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="px-9 py-4" style={{ borderTop: '1px solid #E5E5E3' }}>
         <div className="flex items-center gap-2">
           <StatusDot variant="success" pulse size="sm" />
-          <p className="text-[11.5px] text-[#374151]">Signals updated on data load · Not AI-generated</p>
+          <p className="text-[11.5px] text-[#888888]">Signals updated on data load · Not AI-generated</p>
         </div>
       </div>
     </div>
@@ -204,24 +204,24 @@ interface SensitivityRow {
 }
 
 const RISK_TAG: Record<RiskLevel, { label: string; bg: string; border: string; color: string }> = {
-  HIGH:      { label: 'High',      bg: 'rgba(239,68,68,0.10)',  border: 'rgba(239,68,68,0.22)',  color: '#EF4444' },
-  MEDIUM:    { label: 'Medium',    bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.22)', color: '#F59E0B' },
-  LOW:       { label: 'Low',       bg: 'rgba(34,197,94,0.10)',  border: 'rgba(34,197,94,0.22)',  color: '#22C55E' },
-  FAVORABLE: { label: 'Favorable', bg: 'rgba(34,197,94,0.10)',  border: 'rgba(34,197,94,0.22)',  color: '#22C55E' },
+  HIGH:      { label: 'High',      bg: 'rgba(239,68,68,0.10)',  border: 'rgba(239,68,68,0.22)',  color: '#DC2626' },
+  MEDIUM:    { label: 'Medium',    bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.22)', color: '#D97706' },
+  LOW:       { label: 'Low',       bg: 'rgba(34,197,94,0.10)',  border: 'rgba(34,197,94,0.22)',  color: '#16A34A' },
+  FAVORABLE: { label: 'Favorable', bg: 'rgba(34,197,94,0.10)',  border: 'rgba(34,197,94,0.22)',  color: '#16A34A' },
 };
 
 function SensitivityTable({ rows }: { rows: SensitivityRow[] }) {
   return (
     <div
-      className="rounded-[20px] overflow-hidden"
-      style={{ background: '#15171C', border: '1px solid rgba(255,255,255,0.06)' }}
+      className="rounded-[8px] overflow-hidden"
+      style={{ background: '#FFFFFF', border: '1px solid #D8D8D8' }}
     >
       <div
         className="grid px-9 pt-7 pb-4"
-        style={{ gridTemplateColumns: '2fr 1fr 1fr 110px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+        style={{ gridTemplateColumns: '2fr 1fr 1fr 110px', borderBottom: '1px solid #E5E5E3' }}
       >
         {['Scenario', 'EBITDA Impact', 'Margin Impact', 'Risk Level'].map(col => (
-          <p key={col} className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6B7280]">
+          <p key={col} className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#888888]">
             {col}
           </p>
         ))}
@@ -239,24 +239,24 @@ function SensitivityTable({ rows }: { rows: SensitivityRow[] }) {
             className="grid items-center px-9 py-5 cursor-default transition-colors duration-150"
             style={{
               gridTemplateColumns: '2fr 1fr 1fr 110px',
-              borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.04)',
+              borderBottom: isLast ? 'none' : '1px solid #F0F0EE',
             }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
           >
             <div>
-              <p className="text-[14.5px] font-semibold text-[#F5F7FA]">{row.scenario}</p>
-              <p className="text-[12.5px] text-[#6B7280] mt-0.5">{row.description}</p>
+              <p className="text-[14.5px] font-semibold text-[#111111]">{row.scenario}</p>
+              <p className="text-[12.5px] text-[#888888] mt-0.5">{row.description}</p>
             </div>
             <p
               className="text-[14.5px] font-semibold"
-              style={{ color: posE ? '#22C55E' : '#EF4444', fontVariantNumeric: 'tabular-nums' }}
+              style={{ color: posE ? '#16A34A' : '#DC2626', fontVariantNumeric: 'tabular-nums' }}
             >
               {posE ? '+' : '−'}₹{Math.abs(row.ebitdaDelta).toFixed(1)} Cr
             </p>
             <p
               className="text-[14.5px] font-semibold"
-              style={{ color: posM ? '#22C55E' : '#EF4444', fontVariantNumeric: 'tabular-nums' }}
+              style={{ color: posM ? '#16A34A' : '#DC2626', fontVariantNumeric: 'tabular-nums' }}
             >
               {posM ? '+' : '−'}{Math.abs(row.marginDelta * 100).toFixed(2)} pp
             </p>
@@ -286,23 +286,23 @@ function IntelligenceCard({
 }) {
   return (
     <div
-      className="flex flex-col rounded-[20px] p-8"
-      style={{ background: '#15171C', border: '1px solid rgba(255,255,255,0.06)' }}
+      className="flex flex-col rounded-[8px] p-8"
+      style={{ background: '#FFFFFF', border: '1px solid #D8D8D8' }}
     >
       <div className="flex items-center gap-3.5 mb-6">
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-          style={{ background: 'rgba(245,217,10,0.08)', border: '1px solid rgba(245,217,10,0.14)' }}
+          style={{ background: 'rgba(255,230,0,0.08)', border: '1px solid rgba(255,230,0,0.14)' }}
         >
-          <Icon className="h-[18px] w-[18px]" style={{ color: '#F5D90A' }} strokeWidth={1.75} />
+          <Icon className="h-[18px] w-[18px]" style={{ color: '#E6B800' }} strokeWidth={1.75} />
         </div>
-        <p className="text-[14.5px] font-semibold text-[#F5F7FA] leading-none">{title}</p>
+        <p className="text-[14.5px] font-semibold text-[#111111] leading-none">{title}</p>
       </div>
       <ul className="space-y-3">
         {items.map(item => (
           <li key={item} className="flex items-center gap-3">
-            <span className="h-[5px] w-[5px] rounded-full shrink-0" style={{ background: '#F5D90A' }} />
-            <span className="text-[13.5px] text-[#A1A8B3]">{item}</span>
+            <span className="h-[5px] w-[5px] rounded-full shrink-0" style={{ background: '#E6B800' }} />
+            <span className="text-[13.5px] text-[#555555]">{item}</span>
           </li>
         ))}
       </ul>
@@ -425,7 +425,7 @@ export default function DashboardPage() {
       if (conf < 55) {
         out.push(`Monte Carlo forecast dispersion is elevated at ${sofrM.confidence}% ensemble confidence — rate projections should be treated as directional signals with wide terminal uncertainty.`);
       } else {
-        out.push(`Monte Carlo ensemble convergence is strong at ${sofrM.confidence}% confidence across 10,000 simulation paths — directional signal reliability is high.`);
+        out.push(`Monte Carlo ensemble convergence is strong at ${sofrM.confidence}% confidence across 5,000 simulation paths — directional signal reliability is high.`);
       }
     }
 
@@ -455,20 +455,20 @@ export default function DashboardPage() {
           className="flex items-end justify-between mb-14"
         >
           <div className="space-y-3">
-            <p className="text-[11.5px] font-semibold uppercase tracking-[0.20em] text-[#6B7280]">
+            <p className="text-[11.5px] font-semibold uppercase tracking-[0.20em] text-[#888888]">
               Executive Intelligence
             </p>
             <h1
-              className="font-semibold text-[#F5F7FA] leading-none"
+              className="font-semibold text-[#111111] leading-none"
               style={{ fontSize: '50px', letterSpacing: '-0.03em' }}
             >
               Overview
             </h1>
-            <p className="text-[15px] text-[#6B7280] leading-none">
+            <p className="text-[15px] text-[#888888] leading-none">
               Treasury cockpit &middot; Real-time forecast &amp; risk summary &middot; {today}
             </p>
           </div>
-          <div className="flex items-center gap-2 text-[13px] text-[#6B7280]">
+          <div className="flex items-center gap-2 text-[13px] text-[#888888]">
             <StatusDot
               variant={anyLoading ? 'neutral' : 'success'}
               pulse={!anyLoading}
@@ -577,24 +577,29 @@ export default function DashboardPage() {
                     outerRadius="80%"
                     margin={{ top: 10, right: 40, bottom: 28, left: 40 }}
                   >
-                    <PolarGrid stroke="rgba(255,255,255,0.07)" gridType="polygon" />
+                    <PolarGrid
+                      stroke="#AAAAAA"
+                      strokeWidth={0.8}
+                      gridType="polygon"
+                    />
                     <PolarAngleAxis
                       dataKey="subject"
-                      tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 13, fontWeight: 500 }}
+                      tick={{ fill: '#333333', fontSize: 13, fontWeight: 600 }}
                       tickLine={false}
                     />
                     <PolarRadiusAxis
                       angle={18}
                       domain={[0, 100]}
-                      tick={false}
-                      axisLine={false}
+                      tick={{ fill: '#888888', fontSize: 10 }}
+                      axisLine={{ stroke: '#BBBBBB', strokeWidth: 0.5 }}
+                      tickCount={4}
                     />
                     <Radar
                       name="Risk Score"
                       dataKey="score"
-                      stroke="#F5D90A"
+                      stroke="#E6B800"
                       strokeWidth={1.75}
-                      fill="#F5D90A"
+                      fill="#E6B800"
                       fillOpacity={0.13}
                       animationDuration={700}
                       animationEasing="ease-out"
@@ -695,7 +700,7 @@ export default function DashboardPage() {
                 icon={Cpu}
                 title="Monte Carlo Engine"
                 items={[
-                  '10,000 simulation paths per instrument',
+                  '5,000 simulation paths per instrument',
                   'ARIMA(p,0,q) log-return modelling',
                   'P10 / P25 / P50 / P75 / P90 confidence bands',
                   'Convergence-tested ensemble outputs',
@@ -732,13 +737,13 @@ export default function DashboardPage() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.35, delay: 0.24 }}
           className="mt-12 pt-6 pb-6 flex items-center justify-between"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+          style={{ borderTop: '1px solid #E5E5E3' }}
         >
-          <p className="text-[11.5px] text-[#374151] max-w-lg">
+          <p className="text-[11.5px] text-[#888888] max-w-lg">
             BAML Risk Intelligence Platform · Forecasts are model outputs and not investment advice.
             Scenario computations are deterministic and based on calibrated historical sensitivity factors.
           </p>
-          <p className="text-[11.5px] text-[#374151]">
+          <p className="text-[11.5px] text-[#888888]">
             {new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })} EST
           </p>
         </motion.footer>

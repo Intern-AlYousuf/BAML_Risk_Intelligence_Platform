@@ -121,7 +121,7 @@ interface PercentilePanelProps {
 const PERCENTILE_ROWS = [
   { key: 'p90' as const, label: 'P90', desc: 'Hawkish tail',  note: 'Persistent inflation, no cuts', color: '#EF4444' },
   { key: 'p75' as const, label: 'P75', desc: 'Upside case',   note: 'Slower easing',                 color: '#F59E0B' },
-  { key: 'p50' as const, label: 'P50', desc: 'Base case',     note: 'Consensus Fed path',            color: '#F5D90A', featured: true },
+  { key: 'p50' as const, label: 'P50', desc: 'Base case',     note: 'Consensus Fed path',            color: '#E6B800', featured: true },
   { key: 'p25' as const, label: 'P25', desc: 'Dovish case',   note: 'Faster easing',                 color: '#22C55E' },
   { key: 'p10' as const, label: 'P10', desc: 'Dovish tail',   note: 'Hard landing',                  color: '#22C55E' },
 ];
@@ -133,18 +133,18 @@ function PercentilePanel({
 
   return (
     <div
-      className="flex flex-col rounded-[20px] overflow-hidden"
-      style={{ background: '#15171C', border: '1px solid rgba(255,255,255,0.06)' }}
+      className="flex flex-col rounded-[8px] overflow-hidden"
+      style={{ background: '#FFFFFF', border: '1px solid #D8D8D8' }}
     >
       {/* Header */}
       <div
         className="px-8 pt-8 pb-6"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+        style={{ borderBottom: '1px solid #E5E5E3' }}
       >
-        <p className="text-[17px] font-semibold text-[#F5F7FA] leading-none tracking-tight">
+        <p className="text-[17px] font-semibold text-[#111111] leading-none tracking-tight">
           Scenario Percentiles
         </p>
-        <p className="mt-2 text-[13.5px] text-[#6B7280]">
+        <p className="mt-2 text-[13.5px] text-[#888888]">
           Terminal SOFR · {horizon} horizon
         </p>
       </div>
@@ -160,8 +160,8 @@ function PercentilePanel({
               key={key}
               className="flex items-center justify-between py-4"
               style={{
-                borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.04)',
-                background:   featured ? 'rgba(245,217,10,0.03)' : 'transparent',
+                borderBottom: isLast ? 'none' : '1px solid #F0F0EE',
+                background:   featured ? 'rgba(255,230,0,0.07)' : 'transparent',
                 borderRadius: featured ? '10px' : undefined,
                 padding:      featured ? '16px 12px' : '16px 0',
                 margin:       featured ? '0 -12px' : undefined,
@@ -176,17 +176,17 @@ function PercentilePanel({
                 <div>
                   <p
                     className="text-[14.5px] font-semibold leading-none"
-                    style={{ color: featured ? '#F5D90A' : '#A1A8B3' }}
+                    style={{ color: featured ? '#E6B800' : '#555555' }}
                   >
                     {label}
                     <span
                       className="ml-2 font-normal text-[12.5px]"
-                      style={{ color: 'rgba(255,255,255,0.28)' }}
+                      style={{ color: '#888888' }}
                     >
                       {desc}
                     </span>
                   </p>
-                  <p className="mt-1.5 text-[12px] text-[#374151]">{note}</p>
+                  <p className="mt-1.5 text-[12px] text-[#888888]">{note}</p>
                 </div>
               </div>
 
@@ -207,7 +207,7 @@ function PercentilePanel({
                     transition={{ duration: 0.15 }}
                     className="text-[19px] font-semibold leading-none"
                     style={{
-                      color:              featured ? '#F5D90A' : '#F5F7FA',
+                      color:              featured ? '#E6B800' : '#111111',
                       fontVariantNumeric: 'tabular-nums',
                       letterSpacing:      '-0.02em',
                     }}
@@ -224,9 +224,9 @@ function PercentilePanel({
       {/* Footer */}
       <div
         className="px-8 py-4"
-        style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+        style={{ borderTop: '1px solid #E5E5E3' }}
       >
-        <p className="text-[11.5px] text-[#374151]">
+        <p className="text-[11.5px] text-[#888888]">
           End-of-period SOFR · {nSims.toLocaleString()} paths
         </p>
       </div>
@@ -255,7 +255,7 @@ export default function SOFRPage() {
   } = useSofrForecast(horizon);
 
   const insights  = INSIGHTS[horizon];
-  const nSims     = metrics?.nSimulations ?? 10_000;
+  const nSims     = metrics?.nSimulations ?? 5_000;
   const today     = new Date().toLocaleDateString('en-US', {
     day: 'numeric', month: 'long', year: 'numeric',
   });
@@ -273,16 +273,16 @@ export default function SOFRPage() {
         >
           {/* Title block */}
           <div className="space-y-3">
-            <p className="text-[11.5px] font-semibold uppercase tracking-[0.20em] text-[#6B7280]">
+            <p className="text-[11.5px] font-semibold uppercase tracking-[0.20em] text-[#888888]">
               Rate Analytics
             </p>
             <h1
-              className="font-semibold text-[#F5F7FA] leading-none"
+              className="font-semibold text-[#111111] leading-none"
               style={{ fontSize: '50px', letterSpacing: '-0.03em' }}
             >
               SOFR Forecast
             </h1>
-            <p className="text-[15px] text-[#6B7280] leading-none">
+            <p className="text-[15px] text-[#888888] leading-none">
               Monte Carlo ensemble &middot; {nSims.toLocaleString()} simulations &middot; {today}
             </p>
           </div>
@@ -290,7 +290,7 @@ export default function SOFRPage() {
           {/* Controls */}
           <div className="flex items-center gap-3">
             {/* Live status */}
-            <div className="flex items-center gap-2 text-[13px] text-[#6B7280] mr-1">
+            <div className="flex items-center gap-2 text-[13px] text-[#888888] mr-1">
               <StatusDot
                 variant={loading ? 'neutral' : error ? 'danger' : 'success'}
                 pulse={!loading && !error}
@@ -342,8 +342,8 @@ export default function SOFRPage() {
                   <AlertTriangle className="h-4 w-4 text-[#EF4444]" strokeWidth={1.75} />
                 </div>
                 <div>
-                  <p className="text-[14px] font-semibold text-[#F5F7FA]">Forecast unavailable</p>
-                  <p className="text-[13px] text-[#6B7280] mt-0.5">
+                  <p className="text-[14px] font-semibold text-[#111111]">Forecast unavailable</p>
+                  <p className="text-[13px] text-[#888888] mt-0.5">
                     {error.message ?? 'Unable to load SOFR forecast data.'}
                   </p>
                 </div>
@@ -376,8 +376,8 @@ export default function SOFRPage() {
               loading={loading && !chartData.length}
               actions={
                 <div
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-[8px] text-[12px] text-[#6B7280]"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-[8px] text-[12px] text-[#888888]"
+                  style={{ background: '#F0F0EE', border: '1px solid #D8D8D8' }}
                 >
                   <AlertCircle className="h-3.5 w-3.5 opacity-60" strokeWidth={1.5} />
                   ARIMA + MC
@@ -467,8 +467,8 @@ export default function SOFRPage() {
               loading={loading && !distributionData.length}
               actions={
                 <div
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-[8px] text-[12px] text-[#6B7280]"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-[8px] text-[12px] text-[#888888]"
+                  style={{ background: '#F0F0EE', border: '1px solid #D8D8D8' }}
                 >
                   <Activity className="h-3.5 w-3.5 opacity-60" strokeWidth={1.5} />
                   Monte Carlo
@@ -536,13 +536,13 @@ export default function SOFRPage() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.35, delay: 0.2 }}
           className="mt-12 pt-6 pb-6 flex items-center justify-between"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+          style={{ borderTop: '1px solid #E5E5E3' }}
         >
-          <p className="text-[11.5px] text-[#374151] max-w-lg">
+          <p className="text-[11.5px] text-[#888888] max-w-lg">
             BAML Risk Intelligence Platform · SOFR forecasts are model outputs and not
             investment advice. Past model performance does not guarantee future accuracy.
           </p>
-          <p className="text-[11.5px] text-[#374151]">
+          <p className="text-[11.5px] text-[#888888]">
             {new Date().toLocaleDateString('en-US', {
               day: 'numeric', month: 'long', year: 'numeric',
             })} EST

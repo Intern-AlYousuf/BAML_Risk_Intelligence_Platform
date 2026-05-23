@@ -3,18 +3,10 @@
 import { ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/theme';
 
-/* ---------------------------------------------------------------------------
-   Props
-   --------------------------------------------------------------------------- */
-
 export interface TopbarProps {
   breadcrumb?: string[];
   title?:      string;
 }
-
-/* ---------------------------------------------------------------------------
-   Topbar — 72px fixed, offset 280px from left
-   --------------------------------------------------------------------------- */
 
 export function Topbar({ breadcrumb, title }: TopbarProps) {
   return (
@@ -23,28 +15,27 @@ export function Topbar({ breadcrumb, title }: TopbarProps) {
       style={{
         left:            '280px',
         height:          '72px',
-        backgroundColor: '#111318',
-        borderBottom:    '1px solid rgba(255,255,255,0.05)',
+        backgroundColor: '#FFFFFF',
+        borderBottom:    '1px solid #D8D8D8',
       }}
     >
-      {/* ── Left: breadcrumb ──────────────────────────────────────────── */}
+      {/* Left: breadcrumb */}
       <div className="flex items-center gap-2 min-w-0">
         {breadcrumb && breadcrumb.length > 0 ? (
           breadcrumb.map((crumb, i) => (
             <div key={crumb} className="flex items-center gap-2">
               {i > 0 && (
                 <ChevronRight
-                  className="h-3.5 w-3.5 shrink-0"
-                  style={{ color: 'rgba(255,255,255,0.18)' }}
+                  className="h-3.5 w-3.5 shrink-0 text-[#D8D8D8]"
                   strokeWidth={1.5}
                 />
               )}
               <span
                 className={cn(
-                  'text-[15px] leading-none',
+                  'text-[14px] leading-none',
                   i === breadcrumb.length - 1
-                    ? 'font-semibold text-[#F5F7FA]'
-                    : 'font-normal text-[#6B7280]',
+                    ? 'font-semibold text-[#111111]'
+                    : 'font-normal text-[#888888]',
                 )}
               >
                 {crumb}
@@ -52,28 +43,25 @@ export function Topbar({ breadcrumb, title }: TopbarProps) {
             </div>
           ))
         ) : (
-          <span className="text-[15px] font-semibold text-[#F5F7FA] leading-none">
+          <span className="text-[14px] font-semibold text-[#111111] leading-none">
             {title ?? 'Overview'}
           </span>
         )}
       </div>
 
-      {/* ── Right: profile avatar only ────────────────────────────────── */}
+      {/* Right: profile */}
       <div className="flex items-center shrink-0">
         <button
-          className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-1.5 transition-colors duration-150 hover:bg-[rgba(255,255,255,0.05)]"
+          className="flex items-center gap-2.5 rounded-[4px] px-2.5 py-1.5 transition-colors duration-150 hover:bg-[#F0F0EE]"
           aria-label="Profile"
         >
           <div
             className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{
-              background: 'rgba(245,217,10,0.10)',
-              border:     '1px solid rgba(245,217,10,0.18)',
-            }}
+            style={{ background: '#FFE600', border: '1px solid #D4B800' }}
           >
-            <span className="text-[12px] font-bold leading-none text-[#F5D90A]">TA</span>
+            <span className="text-[11px] font-black leading-none text-black">TA</span>
           </div>
-          <span className="hidden xl:block text-[14px] font-medium text-[#A1A8B3]">
+          <span className="hidden xl:block text-[13.5px] font-medium text-[#555555]">
             Treasury Analyst
           </span>
         </button>

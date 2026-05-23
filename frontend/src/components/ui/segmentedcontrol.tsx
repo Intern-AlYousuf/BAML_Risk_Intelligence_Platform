@@ -3,10 +3,6 @@
 import { motion } from 'framer-motion';
 import { cn } from '../../lib/theme';
 
-/* ---------------------------------------------------------------------------
-   Types
-   --------------------------------------------------------------------------- */
-
 export interface SegmentOption<T extends string = string> {
   label:    string;
   value:    T;
@@ -19,27 +15,20 @@ export interface SegmentedControlProps<T extends string = string> {
   onChange:   (value: T) => void;
   size?:      'sm' | 'md' | 'lg';
   className?: string;
-  /** Full-width: each option expands to fill equal space */
   fullWidth?: boolean;
 }
 
 const SIZE_TRACK: Record<'sm' | 'md' | 'lg', string> = {
-  sm: 'p-1      gap-[3px]',
-  md: 'p-[5px]  gap-1',
-  lg: 'p-1.5    gap-1.5',
+  sm: 'p-[3px] gap-px',
+  md: 'p-1     gap-px',
+  lg: 'p-1     gap-0.5',
 };
 
 const SIZE_OPTION: Record<'sm' | 'md' | 'lg', string> = {
-  sm: 'px-3.5  py-2    text-[12.5px] rounded-[7px]',
-  md: 'px-5    py-2.5  text-[14px]   rounded-[8px]',
-  lg: 'px-6    py-3    text-[15.5px] rounded-[10px]',
+  sm: 'px-3    py-1.5  text-[12px]   rounded-[3px]',
+  md: 'px-4    py-2    text-[13px]   rounded-[4px]',
+  lg: 'px-5    py-2.5  text-[14.5px] rounded-[4px]',
 };
-
-/* ---------------------------------------------------------------------------
-   SegmentedControl
-   Animated pill selector — used for horizon pickers (3M / 6M / 12M), tabs,
-   view toggles, etc.
-   --------------------------------------------------------------------------- */
 
 export function SegmentedControl<T extends string = string>({
   options,
@@ -52,14 +41,14 @@ export function SegmentedControl<T extends string = string>({
   return (
     <div
       className={cn(
-        'inline-flex items-center rounded-[12px]',
+        'inline-flex items-center rounded-[6px]',
         SIZE_TRACK[size],
         fullWidth && 'w-full',
         className,
       )}
       style={{
-        background: 'rgba(255,255,255,0.04)',
-        border:     '1px solid rgba(255,255,255,0.07)',
+        background: '#F0F0EE',
+        border:     '1px solid #D8D8D8',
       }}
       role="tablist"
       aria-label="Segmented control"
@@ -79,20 +68,20 @@ export function SegmentedControl<T extends string = string>({
               'disabled:opacity-40 disabled:cursor-not-allowed',
               SIZE_OPTION[size],
               fullWidth && 'flex-1 text-center',
-              isActive
-                ? 'text-black'
-                : 'text-[#A1A8B3] hover:text-[#F5F7FA]',
+              isActive ? 'text-[#111111]' : 'text-[#888888] hover:text-[#555555]',
             )}
           >
-            {/* Animated background pill */}
             {isActive && (
               <motion.span
                 layoutId={`seg-pill-${Math.random().toString(36).slice(2)}`}
                 className="absolute inset-0 rounded-[inherit]"
-                style={{ background: '#F5D90A' }}
+                style={{
+                  background: '#FFE600',
+                  boxShadow:  '0 1px 3px rgba(0,0,0,0.10)',
+                }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+                transition={{ duration: 0.16, ease: [0.2, 0, 0, 1] }}
               />
             )}
 

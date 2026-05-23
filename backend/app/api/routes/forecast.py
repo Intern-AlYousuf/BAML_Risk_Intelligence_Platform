@@ -21,7 +21,9 @@ the schema module stays free of domain-layer imports (prevents circular deps).
 from __future__ import annotations
 
 import math
-from typing import Annotated
+from typing import Annotated, Any
+
+import pandas as pd
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -196,7 +198,7 @@ Returns:
 async def get_sofr_monte_carlo(
     horizon:         Annotated[int,  Query(ge=30,  le=730,    description="Forecast horizon in calendar days")] = 365,
     lookback_years:  Annotated[int,  Query(ge=1,   le=10)]    = 5,
-    n_simulations:   Annotated[int,  Query(ge=100, le=50_000, description="Number of simulated paths")] = 10_000,
+    n_simulations:   Annotated[int,  Query(ge=100, le=50_000, description="Number of simulated paths")] = 5_000,
     mode:            Annotated[str,  Query(description="'bootstrap' or 'parametric'")] = "bootstrap",
     seed:            Annotated[int | None, Query(description="RNG seed for reproducibility")] = None,
     arima_p:         Annotated[int | None, Query(ge=0, le=8)] = None,
@@ -302,6 +304,12 @@ def _build_monte_carlo_response(
     sim = output.simulation
     fc  = output.forecast
 
+    hist_points = _build_history_points(
+        output.historical_levels,
+        str(sim.forecast_start),
+        sim.horizon_bdays,
+    )
+
     return SOFRMonteCarloResponse(
         series_id       = "SOFR",
         model_name      = fc.model_name,
@@ -316,7 +324,7 @@ def _build_monte_carlo_response(
         bands           = _build_bands(sim.bands),
         terminal_distribution = _build_distribution(sim.terminal_distribution),
         snapshot_distributions= [_build_distribution(d) for d in sim.snapshot_distributions],
-        arima_points    = [_build_forecast_point(p) for p in fc.points],
+        arima_points    = hist_points + [_build_forecast_point(p) for p in fc.points],
         summary         = _build_mc_summary(sim, horizon_calendar_days),
         fit_metrics     = _build_fit_metrics(fc.fit_metrics),
         accuracy        = _build_accuracy(fc.accuracy),
@@ -339,6 +347,49 @@ def _build_forecast_point(p: ForecastPoint) -> ForecastPointSchema:
         ci_upper_50 = round(p.ci_upper_50, 4),
         actual      = None,
     )
+
+
+def _build_history_points(
+    historical_levels: Any,   # pd.Series[float] — typed as Any to avoid import issues
+    forecast_start:    str,
+    max_bdays:         int,
+) -> list[ForecastPointSchema]:
+    """Convert a raw price/rate Series into historical arima_point entries.
+
+    Only the ``actual`` field is set; all forecast/CI fields are None so the
+    chart renders purely the historical line for these dates.
+
+    Parameters
+    ----------
+    historical_levels:
+        Cleaned pandas Series indexed by DatetimeIndex, values are raw spot
+        levels (INR/USD, NGN/USD, SOFR %, etc.) in their natural units.
+    forecast_start:
+        ISO "YYYY-MM-DD" — first date of the forecast horizon.  Historical
+        points strictly before this date are eligible.
+    max_bdays:
+        Maximum number of business days of history to include (matches the
+        forecast horizon length so the chart is symmetric left ↔ right).
+    """
+    if historical_levels is None or len(historical_levels) == 0:
+        return []
+
+    try:
+        fc_ts  = pd.Timestamp(forecast_start)
+        series = historical_levels[historical_levels.index.normalize() < fc_ts]
+        series = series.tail(max_bdays).dropna()
+    except Exception:
+        return []
+
+    return [
+        ForecastPointSchema(
+            date   = dt.strftime("%Y-%m-%d"),
+            actual = round(float(val), 4),
+            # forecast and CI fields intentionally omitted (None) — historical only
+        )
+        for dt, val in series.items()
+        if pd.notna(val)
+    ]
 
 
 def _build_fit_metrics(m: ModelFitMetrics) -> ModelFitMetricsSchema:
@@ -643,7 +694,7 @@ async def get_fx_monte_carlo(
     pair:          Annotated[str, Query(description="FX pair ID: INRUSD | NGNUSD | EURINR")] = "INRUSD",
     horizon:       Annotated[int, Query(ge=30, le=730, description="Forecast horizon in calendar days")] = 365,
     lookback_years: Annotated[int, Query(ge=1, le=10)] = 5,
-    n_simulations: Annotated[int, Query(ge=100, le=50_000, description="Number of simulated paths")] = 10_000,
+    n_simulations: Annotated[int, Query(ge=100, le=50_000, description="Number of simulated paths")] = 5_000,
     mode:          Annotated[str, Query(description="'bootstrap' or 'parametric'")] = "bootstrap",
     seed:          Annotated[int | None, Query(description="RNG seed for reproducibility")] = None,
     arima_p:       Annotated[int | None, Query(ge=0, le=8)] = None,
@@ -738,6 +789,12 @@ def _build_fx_monte_carlo_response(
     except KeyError:
         display_name = pair
 
+    hist_points = _build_history_points(
+        output.historical_levels,
+        str(sim.forecast_start),
+        sim.horizon_bdays,
+    )
+
     return FXMonteCarloResponse(
         pair_id          = pair,
         display_name     = display_name,
@@ -752,7 +809,7 @@ def _build_fx_monte_carlo_response(
         bands            = _build_bands(sim.bands),
         terminal_distribution  = _build_distribution(sim.terminal_distribution),
         snapshot_distributions = [_build_distribution(d) for d in sim.snapshot_distributions],
-        arima_points     = [_build_forecast_point(p) for p in fc.points],
+        arima_points     = hist_points + [_build_forecast_point(p) for p in fc.points],
         summary          = _build_fx_summary(sim, horizon_calendar_days),
         convergence      = _build_convergence(sim.convergence),
         wall_time_s      = round(sim.wall_time_s, 3),

@@ -17,25 +17,20 @@ import { cn } from '../../lib/theme';
    --------------------------------------------------------------------------- */
 
 export interface DistributionPoint {
-  /** Rate label — e.g. "4.25" */
   rate:  string;
-  /** Probability mass (0–100) */
   prob:  number;
 }
 
 export interface DistributionChartProps {
   data:          DistributionPoint[];
-  /** Inclusive range for the "base case" highlighted zone */
   baseRange?:    { low: number; high: number };
-  /** Label shown in the tooltip — e.g. "SOFR" or "NGN/USD" */
   assetLabel?:   string;
-  /** Chart area height in px */
   height?:       number;
   className?:    string;
 }
 
 /* ---------------------------------------------------------------------------
-   Tooltip
+   Tooltip — white card, dark text
    --------------------------------------------------------------------------- */
 
 function DistributionTooltip({
@@ -50,33 +45,32 @@ function DistributionTooltip({
 
   return (
     <div
-      className="rounded-[14px] overflow-hidden"
+      className="overflow-hidden"
       style={{
-        background:          'rgba(15,17,20,0.96)',
-        border:              '1px solid rgba(255,255,255,0.08)',
-        backdropFilter:      'blur(16px)',
-        WebkitBackdropFilter:'blur(16px)',
-        boxShadow:           '0 8px 32px rgba(0,0,0,0.5)',
+        background:   '#FFFFFF',
+        border:       '1px solid #D8D8D8',
+        boxShadow:    '0 4px 16px rgba(0,0,0,0.10)',
+        borderRadius: '4px',
       }}
     >
       <div className="px-4 pt-3.5 pb-3">
-        <p className="text-[10.5px] font-semibold uppercase tracking-[0.15em] text-[#6B7280] mb-2.5 leading-none">
+        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#888888] mb-2.5 leading-none">
           {assetLabel} {label}
         </p>
         <p
           className="text-[18px] font-semibold leading-none"
-          style={{ color: '#F5F7FA', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}
+          style={{ color: '#111111', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}
         >
           {payload[0].value.toFixed(1)}%
         </p>
-        <p className="text-[12px] text-[#6B7280] mt-1.5">probability mass</p>
+        <p className="text-[12px] text-[#888888] mt-1.5">probability mass</p>
       </div>
     </div>
   );
 }
 
 /* ---------------------------------------------------------------------------
-   DistributionChart
+   DistributionChart — EY light theme
    --------------------------------------------------------------------------- */
 
 export function DistributionChart({
@@ -91,15 +85,15 @@ export function DistributionChart({
   const maxProb = Math.max(...data.map(d => d.prob));
 
   function cellColor(entry: DistributionPoint): string {
-    const rate = parseFloat(entry.rate);
+    const rate   = parseFloat(entry.rate);
     const isMode = entry.prob === maxProb;
     const isBase = baseRange
       ? rate >= baseRange.low && rate <= baseRange.high
       : false;
 
-    if (isMode)  return '#F5D90A';
-    if (isBase)  return 'rgba(245,217,10,0.44)';
-    return       'rgba(245,217,10,0.14)';
+    if (isMode)  return '#E6B800';              /* mode: full EY yellow      */
+    if (isBase)  return 'rgba(230,184,0,0.55)'; /* base range: mid yellow    */
+    return        'rgba(230,184,0,0.20)';        /* tail: light yellow        */
   }
 
   return (
@@ -111,7 +105,7 @@ export function DistributionChart({
           margin={{ top: 4, right: 12, left: 0, bottom: 0 }}
         >
           <CartesianGrid
-            stroke="rgba(255,255,255,0.035)"
+            stroke="rgba(0,0,0,0.06)"
             strokeDasharray="0"
             vertical={false}
           />
@@ -119,24 +113,24 @@ export function DistributionChart({
             dataKey="rate"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: 'rgba(255,255,255,0.28)', fontSize: 11.5 }}
+            tick={{ fill: '#888888', fontSize: 11, fontWeight: 500 }}
             tickFormatter={(v: string) => `${v}%`}
             dy={8}
           />
           <YAxis
             axisLine={false}
             tickLine={false}
-            tick={{ fill: 'rgba(255,255,255,0.28)', fontSize: 11 }}
+            tick={{ fill: '#888888', fontSize: 11, fontWeight: 500 }}
             tickFormatter={(v: number) => `${v}%`}
             width={38}
           />
           <Tooltip
             content={<DistributionTooltip assetLabel={assetLabel} />}
-            cursor={{ fill: 'rgba(255,255,255,0.02)' }}
+            cursor={{ fill: 'rgba(0,0,0,0.03)' }}
           />
           <Bar
             dataKey="prob"
-            radius={[5, 5, 0, 0]}
+            radius={[3, 3, 0, 0]}
             isAnimationActive
             animationDuration={600}
             animationEasing="ease-out"

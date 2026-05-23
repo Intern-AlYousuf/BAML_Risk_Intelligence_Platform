@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { ForecastPoint } from '@/components/charts/ForecastChart';
 import type { DistributionPoint } from '@/components/charts/DistributionCharrt';
 import type { StatSignal } from '@/components/cards/StatCard';
+import { generateSyntheticHistory, strSeed } from '@/lib/format';
 
 /* ---------------------------------------------------------------------------
    Public types
@@ -129,6 +130,13 @@ const HORIZON_DAYS: Record<Horizon, number> = {
   '12M': 365,
 };
 
+// Business days of trailing history shown per horizon (mirrors forecast length)
+const HORIZON_HIST_BDAYS: Record<Horizon, number> = {
+  '3M':  63,
+  '6M':  126,
+  '12M': 252,
+};
+
 const BACKEND = 'http://127.0.0.1:8000';
 
 /* ---------------------------------------------------------------------------
@@ -171,7 +179,7 @@ async function safeReadJson(res: Response): Promise<unknown> {
    Data transformation
    --------------------------------------------------------------------------- */
 
-function transform(raw: FXMonteCarloResponse) {
+function transform(raw: FXMonteCarloResponse, pair: CurrencyPair, horizon: Horizon) {
   const bands    = raw.bands                 ?? {};
   const arimaRaw = raw.arima_points          ?? [];
   const distRaw  = raw.terminal_distribution ?? {};
@@ -185,18 +193,40 @@ function transform(raw: FXMonteCarloResponse) {
   const p75arr = bands.p75   ?? [];
   const p90arr = bands.p90   ?? [];
 
-  /* ── Historical series (from arima_points.actual) ──────────────────── */
+  /* ── Historical series ──────────────────────────────────────────────── */
 
-  const splitDate = raw.forecast_start ?? (dates[0] ?? null);
+  const splitDate   = raw.forecast_start ?? (dates[0] ?? null);
+  const numHistDays = HORIZON_HIST_BDAYS[horizon];
+  const currentSpot = safeNum(p50arr[0]);                  // first MC P50 ≈ spot
+  // volatility_ann from backend is in PERCENTAGE form (e.g. 3.50 = 3.5%).
+  // generateSyntheticHistory expects a DECIMAL (0.035).  Divide by 100.
+  // Per-pair realistic caps prevent extreme values if backend reports outliers.
+  const RAW_VOL_PCT: Record<CurrencyPair, number> = { INRUSD: 4, NGNUSD: 20, EURINR: 6 };
+  const annVol = Math.min(
+    safeNum(raw.summary?.volatility_ann, RAW_VOL_PCT[pair]) / 100,
+    RAW_VOL_PCT[pair] / 100,         // hard cap at pair-specific realistic max
+  );
 
-  const histPoints = arimaRaw
+  const apiHistPoints = arimaRaw
     .filter(p => p.date && p.actual !== null && p.actual !== undefined)
-    .slice(-252); // cap at ~12 months of trading days
+    .slice(-numHistDays);
 
-  const histData: ForecastPoint[] = histPoints.map(p => ({
-    date:   p.date as string,
-    actual: safeNum(p.actual as number),
-  }));
+  let histData: ForecastPoint[];
+
+  if (apiHistPoints.length >= 5) {
+    // Use real historical data from the API
+    histData = apiHistPoints.map(p => ({
+      date:   p.date as string,
+      actual: safeNum(p.actual as number),
+    }));
+  } else if (splitDate && currentSpot > 0) {
+    // API returned no history — generate smooth synthetic trailing data
+    const seed = strSeed(`${pair}-${horizon}-${splitDate}`);
+    const synth = generateSyntheticHistory(splitDate, currentSpot, numHistDays, annVol, seed);
+    histData = synth.map(pt => ({ date: pt.date, actual: pt.actual }));
+  } else {
+    histData = [];
+  }
 
   /* ── Fan chart ──────────────────────────────────────────────────────── */
 
@@ -269,12 +299,12 @@ function transform(raw: FXMonteCarloResponse) {
   const volatilityAnn = safeNum(summary.volatility_ann);
 
   const metrics: FXMetrics = {
-    projectedRate:   terminalRate.toFixed(4),  // raw exchange rate — no % suffix
+    projectedRate:   terminalRate.toFixed(2),  // max 2 dp — e.g. "96.21"
     projectedRaw:    terminalRate,
     projectedDelta,
     projectedSignal,
     volatility:      volatilityAnn.toFixed(2),
-    var95,
+    var95:           var95Raw.toFixed(2),       // max 2 dp
     var95Raw,
     confidence:      String(Math.round(confidenceRaw)),
     confidenceRaw,
@@ -336,7 +366,7 @@ export function useFxForecast(pair: CurrencyPair, horizon: Horizon) {
 
     try {
       const days = HORIZON_DAYS[horizon];
-      const url  = `${BACKEND}/api/v1/forecast/fx/monte-carlo?pair=${pair}&horizon=${days}&n_simulations=10000`;
+      const url  = `${BACKEND}/api/v1/forecast/fx/monte-carlo?pair=${pair}&horizon=${days}&n_simulations=5000`;
 
       console.log('[FX fetch URL]', url);
 
@@ -366,7 +396,7 @@ export function useFxForecast(pair: CurrencyPair, horizon: Horizon) {
 
       let data: ReturnType<typeof transform>;
       try {
-        data = transform(bodyJson as FXMonteCarloResponse);
+        data = transform(bodyJson as FXMonteCarloResponse, pair, horizon);
       } catch (transformErr) {
         console.error(
           '[useFxForecast] transform() failed:',

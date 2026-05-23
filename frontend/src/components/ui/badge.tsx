@@ -1,73 +1,30 @@
 import { cn } from '../../lib/theme';
 
-/* ---------------------------------------------------------------------------
-   Variants
-   --------------------------------------------------------------------------- */
-
-type BadgeVariant =
-  | 'accent'
-  | 'success'
-  | 'danger'
-  | 'warning'
-  | 'info'
-  | 'neutral';
-
-type BadgeSize = 'sm' | 'md';
+type BadgeVariant = 'accent' | 'success' | 'danger' | 'warning' | 'info' | 'neutral';
+type BadgeSize    = 'sm' | 'md';
 
 const VARIANT_STYLES: Record<BadgeVariant, { bg: string; text: string; border: string }> = {
-  accent:  {
-    bg:     'rgba(245,217,10,0.10)',
-    text:   '#F5D90A',
-    border: 'rgba(245,217,10,0.22)',
-  },
-  success: {
-    bg:     'rgba(34,197,94,0.10)',
-    text:   '#22C55E',
-    border: 'rgba(34,197,94,0.22)',
-  },
-  danger: {
-    bg:     'rgba(239,68,68,0.10)',
-    text:   '#EF4444',
-    border: 'rgba(239,68,68,0.22)',
-  },
-  warning: {
-    bg:     'rgba(245,158,11,0.10)',
-    text:   '#F59E0B',
-    border: 'rgba(245,158,11,0.22)',
-  },
-  info: {
-    bg:     'rgba(59,130,246,0.10)',
-    text:   '#3B82F6',
-    border: 'rgba(59,130,246,0.22)',
-  },
-  neutral: {
-    bg:     'rgba(255,255,255,0.06)',
-    text:   '#A1A8B3',
-    border: 'rgba(255,255,255,0.10)',
-  },
+  accent:  { bg: 'rgba(255,230,0,0.18)',  text: '#967A00', border: 'rgba(255,230,0,0.40)'  },
+  success: { bg: 'rgba(22,163,74,0.10)',  text: '#15803D', border: 'rgba(22,163,74,0.25)'  },
+  danger:  { bg: 'rgba(220,38,38,0.10)',  text: '#B91C1C', border: 'rgba(220,38,38,0.25)'  },
+  warning: { bg: 'rgba(217,119,6,0.10)',  text: '#B45309', border: 'rgba(217,119,6,0.25)'  },
+  info:    { bg: 'rgba(37,99,235,0.10)',  text: '#1D4ED8', border: 'rgba(37,99,235,0.25)'  },
+  neutral: { bg: '#F0F0EE',               text: '#888888', border: '#D8D8D8'               },
 };
 
 const SIZE_STYLES: Record<BadgeSize, string> = {
-  sm: 'px-[7px] py-[3px] text-[10px] tracking-[0.06em]',
-  md: 'px-2.5   py-1     text-[11px] tracking-[0.04em]',
+  sm: 'px-[6px] py-[3px] text-[9.5px] tracking-[0.08em]',
+  md: 'px-2.5   py-1     text-[10.5px] tracking-[0.05em]',
 };
-
-/* ---------------------------------------------------------------------------
-   Props
-   --------------------------------------------------------------------------- */
 
 export interface BadgeProps {
   variant?:   BadgeVariant;
   size?:      BadgeSize;
-  dot?:       boolean;         /* show a colored status dot on the left */
-  pulseDot?:  boolean;         /* animated pulse for live status */
+  dot?:       boolean;
+  pulseDot?:  boolean;
   children:   React.ReactNode;
   className?: string;
 }
-
-/* ---------------------------------------------------------------------------
-   Badge
-   --------------------------------------------------------------------------- */
 
 export function Badge({
   variant   = 'neutral',
@@ -82,19 +39,15 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full font-bold uppercase leading-none whitespace-nowrap',
+        'inline-flex items-center gap-1.5 rounded-[3px] font-bold uppercase leading-none whitespace-nowrap',
         SIZE_STYLES[size],
         className,
       )}
-      style={{
-        background: s.bg,
-        color:      s.text,
-        border:     `1px solid ${s.border}`,
-      }}
+      style={{ background: s.bg, color: s.text, border: `1px solid ${s.border}` }}
     >
       {(dot || pulseDot) && (
         <span
-          className={cn('h-[6px] w-[6px] rounded-full shrink-0', pulseDot && 'animate-pulse')}
+          className={cn('h-[5px] w-[5px] rounded-full shrink-0', pulseDot && 'animate-pulse')}
           style={{ background: s.text }}
           aria-hidden
         />
@@ -103,10 +56,6 @@ export function Badge({
     </span>
   );
 }
-
-/* ---------------------------------------------------------------------------
-   StatusDot — standalone pulsing dot, no text
-   --------------------------------------------------------------------------- */
 
 export interface StatusDotProps {
   variant?: BadgeVariant;

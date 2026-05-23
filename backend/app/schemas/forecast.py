@@ -32,18 +32,19 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class ForecastPointSchema(BaseModel):
-    """Single-date forecast output.
+    """Single-date forecast or historical output.
 
-    Matches the chart data format expected by Recharts AreaChart / LineChart:
-    one object per date, with all band values present so the frontend can pick
-    which layers to render.
+    Matches the chart data format expected by Recharts AreaChart / LineChart.
+    Historical observations set only `actual`; forecast dates set `forecast` +
+    CI fields.  Both field groups are nullable so that one schema serves both
+    historical and forecast points without a schema split.
     """
-    date:        str   = Field(..., description="ISO date YYYY-MM-DD")
-    forecast:    float = Field(..., description="ARIMA central forecast (% p.a.)")
-    ci_lower_90: float = Field(..., description="5th percentile — outer lower band")
-    ci_upper_90: float = Field(..., description="95th percentile — outer upper band")
-    ci_lower_50: float = Field(..., description="25th percentile — inner lower band")
-    ci_upper_50: float = Field(..., description="75th percentile — inner upper band")
+    date:        str         = Field(...,  description="ISO date YYYY-MM-DD")
+    forecast:    float | None = Field(None, description="ARIMA central forecast — None for historical points")
+    ci_lower_90: float | None = Field(None, description="5th percentile — outer lower band")
+    ci_upper_90: float | None = Field(None, description="95th percentile — outer upper band")
+    ci_lower_50: float | None = Field(None, description="25th percentile — inner lower band")
+    ci_upper_50: float | None = Field(None, description="75th percentile — inner upper band")
     actual:      float | None = Field(None, description="Historical observed rate (training window only)")
 
 

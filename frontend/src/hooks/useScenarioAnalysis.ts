@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import {
   computeScenarioPnl,
+  computeHedgedScenarioPnl,
   computePnlDelta,
   type ScenarioState,
   type StressLevel,
@@ -19,21 +20,23 @@ const DEFAULT_STATE: ScenarioState = {
 };
 
 export interface UseScenarioAnalysisReturn {
-  state:      ScenarioState;
-  result:     PnlResult;
-  delta:      PnlDelta;
-  isBase:     boolean;
-  setIronOre: (level: StressLevel) => void;
-  setFx:      (level: StressLevel) => void;
-  setFreight: (level: StressLevel) => void;
-  reset:      () => void;
+  state:        ScenarioState;
+  result:       PnlResult;
+  delta:        PnlDelta;
+  hedgedResult: PnlResult;
+  hedgedDelta:  PnlDelta;
+  isBase:       boolean;
+  setIronOre:   (level: StressLevel) => void;
+  setFx:        (level: StressLevel) => void;
+  setFreight:   (level: StressLevel) => void;
+  reset:        () => void;
 }
 
 /* ---------------------------------------------------------------------------
    useScenarioAnalysis
    Manages the scenario state with mutual-exclusion enforcement:
    changing one scenario family resets the others to BASE.
-   Internally structured to support future combined scenarios.
+   Returns both unhedged and hedged P&L results computed in real time.
    --------------------------------------------------------------------------- */
 
 export function useScenarioAnalysis(): UseScenarioAnalysisReturn {
@@ -55,9 +58,11 @@ export function useScenarioAnalysis(): UseScenarioAnalysisReturn {
     setState(DEFAULT_STATE);
   }, []);
 
-  const result = computeScenarioPnl(state);
-  const delta  = computePnlDelta(result);
-  const isBase = state.ironOre === 'BASE' && state.fx === 'BASE' && state.freight === 'BASE';
+  const result       = computeScenarioPnl(state);
+  const delta        = computePnlDelta(result);
+  const hedgedResult = computeHedgedScenarioPnl(state);
+  const hedgedDelta  = computePnlDelta(hedgedResult);
+  const isBase       = state.ironOre === 'BASE' && state.fx === 'BASE' && state.freight === 'BASE';
 
-  return { state, result, delta, isBase, setIronOre, setFx, setFreight, reset };
+  return { state, result, delta, hedgedResult, hedgedDelta, isBase, setIronOre, setFx, setFreight, reset };
 }

@@ -2,10 +2,6 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 
-/* ---------------------------------------------------------------------------
-   Types
-   --------------------------------------------------------------------------- */
-
 export type ExplanationIcon = 'ironOre' | 'fx' | 'freight';
 
 interface ScenarioExplanationCardProps {
@@ -16,20 +12,18 @@ interface ScenarioExplanationCardProps {
   isActive?: boolean;
 }
 
-/* ---------------------------------------------------------------------------
-   Icons — inline SVG to avoid Lucide icon version uncertainty
-   --------------------------------------------------------------------------- */
-
 const ICON_CONFIG: Record<ExplanationIcon, {
   bg:     string;
   border: string;
+  bar:    string;
   color:  string;
   svg:    React.ReactNode;
 }> = {
   ironOre: {
-    bg:     'rgba(245,158,11,0.08)',
-    border: 'rgba(245,158,11,0.20)',
-    color:  '#F59E0B',
+    bg:     'rgba(217,119,6,0.09)',
+    border: '#D8D8D8',
+    bar:    '#D97706',
+    color:  '#B45309',
     svg: (
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
         <path d="M8 2L2 6v8h12V6L8 2z"/>
@@ -39,9 +33,10 @@ const ICON_CONFIG: Record<ExplanationIcon, {
     ),
   },
   fx: {
-    bg:     'rgba(59,130,246,0.08)',
-    border: 'rgba(59,130,246,0.20)',
-    color:  '#3B82F6',
+    bg:     'rgba(37,99,235,0.08)',
+    border: '#D8D8D8',
+    bar:    '#2563EB',
+    color:  '#1D4ED8',
     svg: (
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
         <path d="M2 10l4-6 3 4 2-3 3 5"/>
@@ -50,9 +45,10 @@ const ICON_CONFIG: Record<ExplanationIcon, {
     ),
   },
   freight: {
-    bg:     'rgba(34,197,94,0.08)',
-    border: 'rgba(34,197,94,0.20)',
-    color:  '#22C55E',
+    bg:     'rgba(22,163,74,0.08)',
+    border: '#D8D8D8',
+    bar:    '#16A34A',
+    color:  '#15803D',
     svg: (
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
         <rect x="1" y="5" width="9" height="7" rx="1"/>
@@ -63,10 +59,6 @@ const ICON_CONFIG: Record<ExplanationIcon, {
     ),
   },
 };
-
-/* ---------------------------------------------------------------------------
-   ScenarioExplanationCard
-   --------------------------------------------------------------------------- */
 
 export function ScenarioExplanationCard({
   icon,
@@ -82,26 +74,29 @@ export function ScenarioExplanationCard({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.07, ease: [0.2, 0, 0, 1] }}
-      className="flex flex-col gap-4 rounded-[20px] px-6 py-6"
+      className="relative flex flex-col gap-4 rounded-[8px] px-6 py-6 overflow-hidden"
       style={{
-        background: '#15171C',
-        border:     isActive
-          ? `1px solid ${cfg.border}`
-          : '1px solid rgba(255,255,255,0.06)',
-        boxShadow: isActive
-          ? `0 0 0 1px ${cfg.border}, 0 6px 32px ${cfg.bg}`
-          : '0 1px 3px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06)',
-        transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
+        background:  '#FFFFFF',
+        border:      isActive ? `1px solid ${cfg.bar}` : `1px solid ${cfg.border}`,
+        boxShadow:   isActive
+          ? `0 0 0 1px ${cfg.bar}22, 0 4px 16px rgba(0,0,0,0.08)`
+          : '0 1px 4px rgba(0,0,0,0.05)',
+        transition: 'border-color 0.22s ease, box-shadow 0.22s ease',
       }}
     >
-      {/* Icon + Active badge row */}
-      <div className="flex items-center justify-between">
+      {/* Top accent bar */}
+      <div
+        className="absolute inset-x-0 top-0 h-[3px]"
+        style={{ background: isActive ? cfg.bar : '#D8D8D8' }}
+      />
+
+      {/* Icon + Active badge */}
+      <div className="flex items-center justify-between mt-1">
         <div
-          className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] shrink-0"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-[6px] shrink-0"
           style={{
-            background: cfg.bg,
-            border:     `1px solid ${cfg.border}`,
-            color:      cfg.color,
+            background: isActive ? cfg.bg : '#F0F0EE',
+            color:      isActive ? cfg.color : '#888888',
           }}
         >
           {cfg.svg}
@@ -113,12 +108,12 @@ export function ScenarioExplanationCard({
               initial={{ opacity: 0, scale: 0.8, x: 6 }}
               animate={{ opacity: 1, scale: 1, x: 0 }}
               exit={{ opacity: 0, scale: 0.8, x: 6 }}
-              transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-              className="inline-flex items-center rounded-[6px] px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em] leading-none"
+              transition={{ duration: 0.16, ease: [0.2, 0, 0, 1] }}
+              className="inline-flex items-center rounded-[3px] px-2 py-1 text-[9px] font-bold uppercase tracking-[0.14em] leading-none"
               style={{
                 color:      cfg.color,
                 background: cfg.bg,
-                border:     `1px solid ${cfg.border}`,
+                border:     `1px solid ${cfg.bar}40`,
               }}
             >
               Active
@@ -132,10 +127,10 @@ export function ScenarioExplanationCard({
         <h4
           className="font-semibold leading-tight"
           style={{
-            fontSize:      '15px',
+            fontSize:      '14.5px',
             letterSpacing: '-0.01em',
-            color:         isActive ? cfg.color : '#F5F7FA',
-            transition:    'color 0.2s ease',
+            color:         isActive ? cfg.color : '#111111',
+            transition:    'color 0.18s ease',
           }}
         >
           {title}
@@ -147,9 +142,9 @@ export function ScenarioExplanationCard({
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+            transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
             className="text-[13px] leading-relaxed"
-            style={{ color: isActive ? '#A1A8B3' : '#6B7280' }}
+            style={{ color: isActive ? '#555555' : '#888888' }}
           >
             {body}
           </motion.p>

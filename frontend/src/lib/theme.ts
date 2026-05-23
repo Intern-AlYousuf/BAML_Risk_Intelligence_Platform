@@ -1,5 +1,6 @@
 /**
- * Theme constants — TypeScript mirror of tokens.css
+ * Theme constants v3 — EY Light Institutional Theme
+ * TypeScript mirror of tokens.css
  *
  * Use CSS variables (var(--…)) in JSX styles wherever possible.
  * Use these constants for runtime logic, chart configuration, or when
@@ -12,37 +13,39 @@
 
 export const colors = {
   /* Surfaces */
-  bgPage:    '#0B0B0C',
-  bgPanel:   '#111318',
-  bgCard:    '#15171C',
-  bgSurface: '#1C1F24',
+  bgPage:    '#F7F7F5',
+  bgPanel:   '#FFFFFF',
+  bgCard:    '#FFFFFF',
+  bgSurface: '#F0F0EE',
 
   /* Borders */
-  border:       'rgba(255,255,255,0.06)',
-  borderSubtle: 'rgba(255,255,255,0.04)',
-  borderStrong: 'rgba(255,255,255,0.10)',
+  border:       '#D8D8D8',
+  borderSubtle: '#E5E5E3',
+  borderStrong: '#B8B8B6',
 
-  /* Accent */
-  accent:      '#F5D90A',
-  accentDim:   'rgba(245,217,10,0.10)',
-  accentGlow:  'rgba(245,217,10,0.06)',
-  accentMuted: '#A89208',
+  /* Accent — EY Yellow */
+  accent:      '#FFE600',
+  accentDim:   'rgba(255,230,0,0.15)',
+  accentGlow:  'rgba(255,230,0,0.08)',
+  accentMuted: '#C9A800',
+  accentText:  '#967A00',   /* for text on light backgrounds */
+  accentChart: '#E6B800',   /* slightly richer for chart lines on white */
 
   /* Text */
-  text1: '#F5F7FA',   /* primary   */
-  text2: '#A1A8B3',   /* secondary */
-  text3: '#6B7280',   /* muted     */
-  text4: '#374151',   /* disabled  */
+  text1: '#111111',   /* primary   */
+  text2: '#555555',   /* secondary */
+  text3: '#888888',   /* muted     */
+  text4: '#BBBBBB',   /* disabled  */
 
   /* Status */
-  green:    '#22C55E',
-  greenDim: 'rgba(34,197,94,0.10)',
-  red:      '#EF4444',
-  redDim:   'rgba(239,68,68,0.10)',
-  amber:    '#F59E0B',
-  amberDim: 'rgba(245,158,11,0.10)',
-  blue:     '#3B82F6',
-  blueDim:  'rgba(59,130,246,0.10)',
+  green:    '#16A34A',
+  greenDim: 'rgba(22,163,74,0.10)',
+  red:      '#DC2626',
+  redDim:   'rgba(220,38,38,0.10)',
+  amber:    '#D97706',
+  amberDim: 'rgba(217,119,6,0.10)',
+  blue:     '#2563EB',
+  blueDim:  'rgba(37,99,235,0.10)',
 } as const;
 
 /* ---------------------------------------------------------------------------
@@ -50,41 +53,57 @@ export const colors = {
    --------------------------------------------------------------------------- */
 
 export const layout = {
-  sidebarWidth: 260,     /* px */
-  topbarHeight: 64,      /* px */
-  pagePadX:     40,      /* px */
-  pagePadY:     40,      /* px */
-  sectionGap:   32,      /* px */
-  cardGap:      20,      /* px — spec: 20px gap system */
+  sidebarWidth: 280,     /* px */
+  topbarHeight: 72,      /* px */
+  pagePadX:     48,      /* px */
+  pagePadY:     48,      /* px */
+  sectionGap:   40,      /* px */
+  cardGap:      20,      /* px */
 } as const;
 
 /* ---------------------------------------------------------------------------
-   Radius
+   Radius — sharp institutional style
    --------------------------------------------------------------------------- */
 
 export const radius = {
-  xs:   '4px',
-  sm:   '6px',
-  md:   '10px',
-  lg:   '14px',
-  card: '20px',   /* spec: 20px card corners */
+  xs:   '2px',
+  sm:   '4px',
+  md:   '6px',
+  lg:   '8px',
+  card: '8px',
   full: '9999px',
 } as const;
 
 /* ---------------------------------------------------------------------------
-   Chart palette — use these when configuring Recharts / chart libraries
+   Chart palette — Recharts / chart library configuration
    --------------------------------------------------------------------------- */
 
 export const chartColors = {
-  primary:    '#F5D90A',
-  secondary:  '#3B82F6',
-  tertiary:   '#22C55E',
-  quaternary: '#EF4444',
-  quinary:    '#A78BFA',
+  /* Primary forecast + distribution line */
+  primary:    '#E6B800',   /* EY yellow, slightly richer for white bg    */
+  accent:     '#FFE600',   /* raw EY yellow for fills / highlights        */
 
-  grid:       'rgba(255,255,255,0.04)',
-  axis:       'rgba(255,255,255,0.28)',
-  tooltip:    '#15171C',
+  /* Historical line */
+  history:    '#111111',   /* solid black                                 */
+
+  /* Confidence band fills (translucent yellow) */
+  bandOuter:  'rgba(230,184,0,0.10)',
+  bandInner:  'rgba(230,184,0,0.22)',
+
+  /* Chart infrastructure */
+  grid:       'rgba(0,0,0,0.06)',
+  gridSubtle: 'rgba(0,0,0,0.04)',
+  axis:       '#888888',
+
+  /* Tooltip */
+  tooltipBg:     '#FFFFFF',
+  tooltipBorder: '#D8D8D8',
+
+  /* Status */
+  secondary:  '#2563EB',
+  tertiary:   '#16A34A',
+  quaternary: '#DC2626',
+  quinary:    '#7C3AED',
 } as const;
 
 /* ---------------------------------------------------------------------------
@@ -92,14 +111,13 @@ export const chartColors = {
    --------------------------------------------------------------------------- */
 
 export const shadows = {
-  card: '0 1px 3px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06)',
-  lg:   '0 4px 32px rgba(0,0,0,0.5)',
-  xl:   '0 8px 48px rgba(0,0,0,0.65)',
+  card: '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px #D8D8D8',
+  lg:   '0 4px 24px rgba(0,0,0,0.10)',
+  xl:   '0 8px 40px rgba(0,0,0,0.14)',
 } as const;
 
 /* ---------------------------------------------------------------------------
    cn — Tailwind class merger
-   Wraps clsx for conditional class logic.
    --------------------------------------------------------------------------- */
 
 import { clsx, type ClassValue } from 'clsx';

@@ -165,6 +165,7 @@ class SOFRForecastOutput:
     simulation:        MonteCarloResult | None = None
     fit_wall_time_s:   float = 0.0
     series_id:         str   = "SOFR"
+    historical_levels: pd.Series | None = None  # raw SOFR levels for chart history
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
@@ -433,15 +434,16 @@ class SOFRForecastEngine:
         )
 
         return SOFRForecastOutput(
-            forecast        = forecast_result,
-            fitted_order    = fitted_order,
-            order_was_auto  = order_was_auto,
-            stationarity    = stationarity,
-            diagnostics     = diagnostics,
-            backtest        = backtest,
-            simulation      = simulation,
-            fit_wall_time_s = fit_elapsed,
-            series_id       = series_id,
+            forecast          = forecast_result,
+            fitted_order      = fitted_order,
+            order_was_auto    = order_was_auto,
+            stationarity      = stationarity,
+            diagnostics       = diagnostics,
+            backtest          = backtest,
+            simulation        = simulation,
+            fit_wall_time_s   = fit_elapsed,
+            series_id         = series_id,
+            historical_levels = levels,   # raw SOFR levels for chart history
         )
 
     # ── Delta pipeline (SARIMAX) — Reserved for future advanced forecasting ──────

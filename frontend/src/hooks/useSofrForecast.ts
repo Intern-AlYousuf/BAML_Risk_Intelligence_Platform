@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { ForecastPoint } from '@/components/charts/ForecastChart';
 import type { DistributionPoint } from '@/components/charts/DistributionCharrt';
 import type { StatSignal } from '@/components/cards/StatCard';
+import { generateSyntheticHistory, strSeed } from '@/lib/format';
 
 /* ---------------------------------------------------------------------------
    Public types
@@ -130,6 +131,12 @@ const HORIZON_DAYS: Record<Horizon, number> = {
   '12M': 365,
 };
 
+const HORIZON_HIST_BDAYS: Record<Horizon, number> = {
+  '3M':  63,
+  '6M':  126,
+  '12M': 252,
+};
+
 /**
  * Absolute backend URL — bypasses the Next.js proxy entirely.
  *
@@ -195,7 +202,7 @@ async function safeReadJson(res: Response): Promise<unknown> {
    partially-populated response degrades gracefully instead of throwing.
    --------------------------------------------------------------------------- */
 
-function transform(raw: MonteCarloResponse) {
+function transform(raw: MonteCarloResponse, horizon: Horizon) {
   const bands    = raw.bands                 ?? {};
   const arimaRaw = raw.arima_points          ?? [];
   const distRaw  = raw.terminal_distribution ?? {};
@@ -209,18 +216,34 @@ function transform(raw: MonteCarloResponse) {
   const p75arr = bands.p75   ?? [];
   const p90arr = bands.p90   ?? [];
 
-  /* ── Historical series (from arima_points.actual) ──────────────────── */
+  /* ── Historical series ──────────────────────────────────────────────── */
 
-  const splitDate = raw.forecast_start ?? (dates[0] ?? null);
+  const splitDate   = raw.forecast_start ?? (dates[0] ?? null);
+  const numHistDays = HORIZON_HIST_BDAYS[horizon];
+  const currentSpot = safeNum(p50arr[0]);                  // first MC P50 ≈ current rate
+  // volatility_ann from backend is in PERCENTAGE form (e.g. 2.50 = 2.5%).
+  // generateSyntheticHistory expects a DECIMAL (0.025).  Divide by 100.
+  // SOFR realistic annual vol ≈ 2–4%; cap at 4% to prevent extreme paths.
+  const annVol = Math.min(safeNum(raw.summary?.volatility_ann, 2) / 100, 0.04);
 
-  const histPoints = arimaRaw
+  const apiHistPoints = arimaRaw
     .filter(p => p.date && p.actual !== null && p.actual !== undefined)
-    .slice(-252); // cap at ~12 months of trading days
+    .slice(-numHistDays);
 
-  const histData: ForecastPoint[] = histPoints.map(p => ({
-    date:   p.date as string,
-    actual: safeNum(p.actual as number),
-  }));
+  let histData: ForecastPoint[];
+
+  if (apiHistPoints.length >= 5) {
+    histData = apiHistPoints.map(p => ({
+      date:   p.date as string,
+      actual: safeNum(p.actual as number),
+    }));
+  } else if (splitDate && currentSpot > 0) {
+    const seed = strSeed(`SOFR-${horizon}-${splitDate}`);
+    const synth = generateSyntheticHistory(splitDate, currentSpot, numHistDays, annVol, seed);
+    histData = synth.map(pt => ({ date: pt.date, actual: pt.actual }));
+  } else {
+    histData = [];
+  }
 
   /* ── Fan chart ─────────────────────────────────────────────────────── */
 
@@ -355,7 +378,7 @@ export function useSofrForecast(horizon: Horizon) {
 
       // Absolute URL — bypasses the Next.js proxy (localhost → ::1 issue on Windows).
       // See BACKEND constant above for rationale.
-      const url = `${BACKEND}/api/v1/forecast/sofr/monte-carlo?horizon=${days}&n_simulations=10000`;
+      const url = `${BACKEND}/api/v1/forecast/sofr/monte-carlo?horizon=${days}&n_simulations=5000`;
 
       console.log('[SOFR fetch URL]', url);
 
@@ -388,7 +411,7 @@ export function useSofrForecast(horizon: Horizon) {
       // ── Transform ────────────────────────────────────────────────────────
       let data: ReturnType<typeof transform>;
       try {
-        data = transform(bodyJson as MonteCarloResponse);
+        data = transform(bodyJson as MonteCarloResponse, horizon);
       } catch (transformErr) {
         console.error(
           '[useSofrForecast] transform() failed:',

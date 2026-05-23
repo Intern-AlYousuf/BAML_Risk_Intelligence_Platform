@@ -1,5 +1,5 @@
 /* =============================================================================
-   BAML Risk Intelligence Platform — Design Tokens v2
+   BAML Risk Intelligence Platform — Design Tokens v3 (EY Light Theme)
    Pure CSS custom properties — no Tailwind dependency.
    Imported by app/globals.css before the @theme block.
    ============================================================================= */
@@ -7,48 +7,49 @@
 :root {
 
   /* ---------------------------------------------------------------------------
-     SURFACES
+     SURFACES — warm off-white institutional palette
      --------------------------------------------------------------------------- */
-  --bg-page:    #0B0B0C;   /* main page background                    */
-  --bg-panel:   #111318;   /* sidebar + topbar chrome                 */
-  --bg-card:    #15171C;   /* card / panel surface                    */
-  --bg-surface: #1C1F24;   /* hover state / overlay / inset           */
+  --bg-page:    #F7F7F5;   /* main page background — warm off-white            */
+  --bg-panel:   #FFFFFF;   /* sidebar + topbar chrome — pure white              */
+  --bg-card:    #FFFFFF;   /* card / panel surface — pure white                 */
+  --bg-surface: #F0F0EE;   /* hover state / overlay / inset — light warm gray  */
 
   /* ---------------------------------------------------------------------------
      BORDERS
      --------------------------------------------------------------------------- */
-  --border:        rgba(255, 255, 255, 0.06);
-  --border-subtle: rgba(255, 255, 255, 0.04);
-  --border-strong: rgba(255, 255, 255, 0.10);
+  --border:        #D8D8D8;
+  --border-subtle: #E5E5E3;
+  --border-strong: #B8B8B6;
 
   /* ---------------------------------------------------------------------------
-     ACCENT — YELLOW
+     ACCENT — EY YELLOW
      --------------------------------------------------------------------------- */
-  --accent:       #F5D90A;
-  --accent-dim:   rgba(245, 217, 10, 0.10);
-  --accent-glow:  rgba(245, 217, 10, 0.06);
-  --accent-muted: #A89208;
-  --accent-text:  #E8CC08;    /* slightly softer for large text */
+  --accent:       #FFE600;
+  --accent-dim:   rgba(255, 230, 0, 0.15);
+  --accent-glow:  rgba(255, 230, 0, 0.08);
+  --accent-muted: #C9A800;
+  --accent-text:  #967A00;    /* for text/labels on light backgrounds */
+  --accent-chart: #E6B800;    /* slightly richer for chart lines on white */
 
   /* ---------------------------------------------------------------------------
      TEXT
      --------------------------------------------------------------------------- */
-  --text-1: #F5F7FA;   /* primary                                     */
-  --text-2: #A1A8B3;   /* secondary                                   */
-  --text-3: #6B7280;   /* muted / placeholder                         */
-  --text-4: #374151;   /* disabled                                    */
+  --text-1: #111111;   /* primary                                     */
+  --text-2: #555555;   /* secondary                                   */
+  --text-3: #888888;   /* muted / placeholder                         */
+  --text-4: #BBBBBB;   /* disabled                                    */
 
   /* ---------------------------------------------------------------------------
      STATUS
      --------------------------------------------------------------------------- */
-  --green:     #22C55E;
-  --green-dim: rgba(34,  197, 94,  0.10);
-  --red:       #EF4444;
-  --red-dim:   rgba(239, 68,  68,  0.10);
-  --amber:     #F59E0B;
-  --amber-dim: rgba(245, 158, 11,  0.10);
-  --blue:      #3B82F6;
-  --blue-dim:  rgba(59,  130, 246, 0.10);
+  --green:     #16A34A;
+  --green-dim: rgba(22,  163, 74,  0.10);
+  --red:       #DC2626;
+  --red-dim:   rgba(220, 38,  38,  0.10);
+  --amber:     #D97706;
+  --amber-dim: rgba(217, 119, 6,   0.10);
+  --blue:      #2563EB;
+  --blue-dim:  rgba(37,  99,  235, 0.10);
 
   /* ---------------------------------------------------------------------------
      LAYOUT
@@ -58,17 +59,17 @@
   --page-pad-x:  3rem;      /* 48px horizontal page gutter            */
   --page-pad-y:  3rem;      /* 48px vertical page gutter              */
   --section-gap: 2.5rem;    /* 40px between page sections             */
-  --card-gap:    1.25rem;   /* 20px between cards (spec requirement)  */
+  --card-gap:    1.25rem;   /* 20px between cards                     */
   --card-pad:    2.25rem;   /* 36px inner card padding                */
 
   /* ---------------------------------------------------------------------------
-     RADIUS
+     RADIUS — sharp institutional style
      --------------------------------------------------------------------------- */
-  --r-xs:   4px;
-  --r-sm:   6px;
-  --r-md:   10px;
-  --r-lg:   14px;
-  --r-card: 20px;      /* spec: 20px card corners                    */
+  --r-xs:   2px;
+  --r-sm:   4px;
+  --r-md:   6px;
+  --r-lg:   8px;
+  --r-card: 8px;       /* sharp institutional cards                  */
   --r-full: 9999px;
 
   /* ---------------------------------------------------------------------------
@@ -76,20 +77,20 @@
      spec: page titles 36px · section titles 18px · KPI 48–56px · labels 14–16px
      --------------------------------------------------------------------------- */
   --text-xs:   0.75rem;    /*  12px */
-  --text-sm:   0.875rem;   /*  14px — labels (spec: 14–16px)          */
-  --text-base: 1rem;       /*  16px — labels + body                   */
-  --text-lg:   1.125rem;   /*  18px — section titles (spec: 18px)     */
-  --text-xl:   1.375rem;   /*  22px — sub-section headings            */
-  --text-2xl:  2.25rem;    /*  36px — page titles (spec: 36px)        */
-  --text-kpi:  3rem;       /*  48px — KPI display values (spec: 48px) */
-  --text-hero: 3.5rem;     /*  56px — hero KPI (spec: 56px)           */
+  --text-sm:   0.875rem;   /*  14px */
+  --text-base: 1rem;       /*  16px */
+  --text-lg:   1.125rem;   /*  18px */
+  --text-xl:   1.375rem;   /*  22px */
+  --text-2xl:  2.25rem;    /*  36px */
+  --text-kpi:  3rem;       /*  48px */
+  --text-hero: 3.5rem;     /*  56px */
 
   /* ---------------------------------------------------------------------------
-     SHADOWS
+     SHADOWS — subtle light-mode shadows
      --------------------------------------------------------------------------- */
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06);
-  --shadow-lg:   0 4px 32px rgba(0, 0, 0, 0.5);
-  --shadow-xl:   0 8px 48px rgba(0, 0, 0, 0.65);
+  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.07), 0 0 0 1px #D8D8D8;
+  --shadow-lg:   0 4px 24px rgba(0, 0, 0, 0.10);
+  --shadow-xl:   0 8px 40px rgba(0, 0, 0, 0.14);
 
   /* ---------------------------------------------------------------------------
      ANIMATION

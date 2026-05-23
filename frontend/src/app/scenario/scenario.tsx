@@ -17,14 +17,18 @@ import {
   type PnlResult,
   type PnlDelta,
   IRON_ORE_PCT,
-  IRON_ORE_SENS,
+  IRON_ORE_UNHEDGED_SENS,
+  IRON_ORE_HEDGE_GAIN_SENS,
   FREIGHT_PCT,
-  FREIGHT_SENS,
+  FREIGHT_UNHEDGED_SENS,
+  FREIGHT_HEDGE_GAIN_SENS,
   FX_SPOTS,
   FX_DEPRECIATION_PCT,
-  BASE_FX_SPOT,
-  FX_REV_SENS,
-  FX_COGS_SENS,
+  SEV_FX_DEPR_PCT,
+  SEAGULL_SHORT_PUT,
+  SEAGULL_LONG_CALL,
+  SEAGULL_SHORT_CALL,
+  computeSeagullPayoff,
   formatCr,
   formatDeltaCr,
   formatDeltaPp,
@@ -45,8 +49,8 @@ function getActiveFamily(state: ScenarioState): ActiveFamily {
 
 /* ---------------------------------------------------------------------------
    Dynamic explanation card content
-   Returns rich, real-number body text for the active scenario family,
-   and concise educational text for inactive families.
+   Active card: live numbers for both scenario impact AND hedge effectiveness.
+   Inactive card: concise educational text explaining the hedge strategy.
    --------------------------------------------------------------------------- */
 
 interface ExplanationCard {
@@ -57,52 +61,104 @@ interface ExplanationCard {
 }
 
 function buildExplanationCards(
-  state:  ScenarioState,
-  result: PnlResult,
-  delta:  PnlDelta,
+  state:        ScenarioState,
+  result:       PnlResult,
+  delta:        PnlDelta,
+  hedgedResult: PnlResult,
+  hedgedDelta:  PnlDelta,
 ): ExplanationCard[] {
   const active = getActiveFamily(state);
 
   // ── Iron Ore ──────────────────────────────────────────────────────────────
-  const ironOreBody = active === 'ironOre'
-    ? `A +${IRON_ORE_PCT[state.ironOre]}% iron ore price shock adds ` +
-      `₹ ${delta.cogs.toFixed(2)} Cr to COGS, compressing EBITDA to ` +
-      `${formatCr(result.ebitda)} ` +
-      `(${formatDeltaCr(delta.ebitda)} vs base, ${formatDeltaPp(delta.ebitdaMargin)} on margin). ` +
-      `Coking coal co-movement amplifies raw material inflation pressure at this stress level.`
-    : `Iron ore price inflation flows directly into COGS through raw material procurement. ` +
-      `Each +1% shock adds ₹ ${IRON_ORE_SENS.toFixed(2)} Cr to costs. ` +
-      `Steel spread compression and coking coal co-movement amplify margin impact in high-intensity production cycles.`;
+  const sevUnhedgedShock = (IRON_ORE_UNHEDGED_SENS * 20).toFixed(2);
+  const sevHedgeGain     = (IRON_ORE_HEDGE_GAIN_SENS * 20).toFixed(2);
+
+  let ironOreBody: string;
+  if (active === 'ironOre') {
+    const pct           = IRON_ORE_PCT[state.ironOre];
+    const unhedgedShock = IRON_ORE_UNHEDGED_SENS   * pct;
+    const hedgeGain     = IRON_ORE_HEDGE_GAIN_SENS * pct;
+    const netCogs       = unhedgedShock - hedgeGain;
+    const netSign       = netCogs >= 0 ? '+' : '−';
+    ironOreBody =
+      `A +${pct}% iron ore shock adds ₹ ${unhedgedShock.toFixed(2)} Cr to COGS unhedged ` +
+      `(EBITDA: ${formatCr(result.ebitda)}, ${formatDeltaCr(delta.ebitda)} vs base). ` +
+      `Iron ore futures and pellet premium forwards deliver a ₹ ${hedgeGain.toFixed(2)} Cr hedge gain, ` +
+      `netting to a ${netSign}₹ ${Math.abs(netCogs).toFixed(2)} Cr COGS movement. ` +
+      `Hedged EBITDA: ${formatCr(hedgedResult.ebitda)} (${formatDeltaCr(hedgedDelta.ebitda)} vs base, ` +
+      `${formatDeltaPp(hedgedDelta.ebitdaMargin)} on margin).`;
+  } else {
+    ironOreBody =
+      `Iron ore price inflation flows directly into raw material COGS. ` +
+      `Each +1% shock adds ₹ ${IRON_ORE_UNHEDGED_SENS.toFixed(2)} Cr unhedged. ` +
+      `Iron ore futures and pellet premium forwards act as an offset — ` +
+      `at SEVERE (+20%), ₹ ${sevHedgeGain} Cr of hedge gain fully covers the ` +
+      `₹ ${sevUnhedgedShock} Cr COGS inflation and protects EBITDA above the base case.`;
+  }
 
   // ── FX ────────────────────────────────────────────────────────────────────
-  const fxSevereRevGain  = (FX_REV_SENS  * (FX_SPOTS.SEVERE - BASE_FX_SPOT)).toFixed(0);
-  const fxSevereCogsRise = (FX_COGS_SENS * (FX_SPOTS.SEVERE - BASE_FX_SPOT)).toFixed(0);
-  const fxBody = active === 'fx'
-    ? `At ${FX_SPOTS[state.fx].toFixed(1)} INR/USD (+${FX_DEPRECIATION_PCT[state.fx]}% depreciation), ` +
-      `export revenues gain ₹ ${delta.revenue.toFixed(2)} Cr while imported input costs ` +
-      `rise ₹ ${delta.cogs.toFixed(2)} Cr. ` +
-      `Net EBITDA impact: ${formatDeltaCr(delta.ebitda)} — ` +
-      `export realisation outpaces input cost inflation.`
-    : `INR depreciation creates a dual-channel P&L effect: export realisations improve while ` +
+  const seagullDesc = `Short Put ₹ ${SEAGULL_SHORT_PUT} / Long Call ₹ ${SEAGULL_LONG_CALL} / Short Call ₹ ${SEAGULL_SHORT_CALL}`;
+  const sevSpot     = FX_SPOTS.SEVERE;
+  const sevPayoff   = computeSeagullPayoff(sevSpot);
+  const sevEffRate  = sevSpot - sevPayoff;
+
+  let fxBody: string;
+  if (active === 'fx') {
+    const spot          = FX_SPOTS[state.fx];
+    const depPct        = FX_DEPRECIATION_PCT[state.fx];
+    const payoff        = computeSeagullPayoff(spot);
+    const effectiveRate = spot - payoff;
+    // delta.cogs is the unhedged COGS change; hedgedDelta.cogs is the hedged COGS change
+    // Both are pre-computed via the percentage-depreciation engine.
+    fxBody =
+      `At ${spot.toFixed(1)} INR/USD (+${depPct}% depreciation), exports gain ₹ ${delta.revenue.toFixed(2)} Cr ` +
+      `while unhedged imports rise ₹ ${delta.cogs.toFixed(2)} Cr ` +
+      `(unhedged EBITDA: ${formatCr(result.ebitda)}, ${formatDeltaCr(delta.ebitda)}). ` +
+      `The zero-cost seagull (${seagullDesc}) delivers a ₹ ${payoff.toFixed(2)} option payoff, ` +
+      `locking the effective import rate at ${effectiveRate.toFixed(1)} INR/USD. ` +
+      `Hedged COGS inflation: ₹ ${hedgedDelta.cogs.toFixed(2)} Cr. ` +
+      `Hedged EBITDA: ${formatCr(hedgedResult.ebitda)} (${formatDeltaCr(hedgedDelta.ebitda)} vs base).`;
+  } else {
+    fxBody =
+      `INR depreciation creates a dual-channel P&L effect: export revenues improve while ` +
       `USD-denominated imports become costlier. ` +
-      `At SEVERE (+${FX_DEPRECIATION_PCT.SEVERE}%), export uplift of ₹ ${fxSevereRevGain} Cr ` +
-      `outpaces COGS inflation of ₹ ${fxSevereCogsRise} Cr, netting a positive EBITDA contribution.`;
+      `Sensitivities: ₹ 57.13 Cr revenue uplift and ₹ 46.07 Cr COGS inflation per 1% depreciation (calibrated at ${SEV_FX_DEPR_PCT}%). ` +
+      `A zero-cost long seagull (${seagullDesc}) caps the effective import rate — ` +
+      `at SEVERE (${sevSpot.toFixed(1)} INR/USD, +${FX_DEPRECIATION_PCT.SEVERE}%) the option delivers ` +
+      `a ₹ ${sevPayoff.toFixed(2)} payoff, locking import costs at ${sevEffRate.toFixed(1)} INR/USD ` +
+      `while exports benefit fully from depreciation.`;
+  }
 
   // ── Freight ───────────────────────────────────────────────────────────────
-  const freightBody = active === 'freight'
-    ? `A +${FREIGHT_PCT[state.freight]}% freight cost shock adds ` +
-      `₹ ${delta.cogs.toFixed(2)} Cr to COGS, reducing EBITDA to ` +
-      `${formatCr(result.ebitda)} ` +
-      `(${formatDeltaCr(delta.ebitda)} vs base, ${formatDeltaPp(delta.ebitdaMargin)} on margin). ` +
-      `Supply chain pressure concentrates in bulk carrier and container rates on raw material import channels.`
-    : `Freight cost escalation raises landed import costs and export logistics expenses with no revenue offset. ` +
-      `A +20% shock adds ₹ ${(FREIGHT_SENS * 20).toFixed(2)} Cr to COGS — direct EBITDA compression. ` +
-      `Bulk carrier rate volatility and fuel surcharges drive episodic inflation in commodity-intensive supply chains.`;
+  const sevFreightShock = (FREIGHT_UNHEDGED_SENS * 20).toFixed(2);
+  const sevFFAGain      = (FREIGHT_HEDGE_GAIN_SENS * 20).toFixed(2);
+
+  let freightBody: string;
+  if (active === 'freight') {
+    const pct           = FREIGHT_PCT[state.freight];
+    const freightShock  = FREIGHT_UNHEDGED_SENS   * pct;
+    const ffaGain       = FREIGHT_HEDGE_GAIN_SENS * pct;
+    const netCogs       = freightShock - ffaGain;
+    freightBody =
+      `A +${pct}% freight escalation adds ₹ ${freightShock.toFixed(2)} Cr to COGS unhedged ` +
+      `(EBITDA: ${formatCr(result.ebitda)}, ${formatDeltaCr(delta.ebitda)} vs base). ` +
+      `Freight Forward Agreements (FFAs) deliver a ₹ ${ffaGain.toFixed(2)} Cr offset, ` +
+      `reducing net COGS exposure to ₹ ${netCogs.toFixed(2)} Cr. ` +
+      `Hedged EBITDA: ${formatCr(hedgedResult.ebitda)} (${formatDeltaCr(hedgedDelta.ebitda)} vs base, ` +
+      `${formatDeltaPp(hedgedDelta.ebitdaMargin)} on margin).`;
+  } else {
+    freightBody =
+      `Freight cost escalation raises landed import costs with no direct revenue offset. ` +
+      `Each +1% escalation adds ₹ ${FREIGHT_UNHEDGED_SENS.toFixed(2)} Cr to COGS. ` +
+      `Freight Forward Agreements (FFAs) hedge approximately 50% of exposure — ` +
+      `at SEVERE (+20%), ₹ ${sevFFAGain} Cr of FFA gains offset ₹ ${sevFreightShock} Cr of cost inflation, ` +
+      `stabilising EBITDA and protecting import/export freight margins.`;
+  }
 
   return [
-    { icon: 'ironOre', title: 'Iron Ore Price Risk',    body: ironOreBody, isActive: active === 'ironOre' },
-    { icon: 'fx',      title: 'INR Depreciation Impact', body: fxBody,      isActive: active === 'fx'      },
-    { icon: 'freight', title: 'Freight Cost Escalation', body: freightBody,  isActive: active === 'freight' },
+    { icon: 'ironOre', title: 'Iron Ore Futures Hedge',    body: ironOreBody, isActive: active === 'ironOre' },
+    { icon: 'fx',      title: 'Zero-Cost Seagull Strategy', body: fxBody,      isActive: active === 'fx'      },
+    { icon: 'freight', title: 'Freight Forward Agreements', body: freightBody,  isActive: active === 'freight' },
   ];
 }
 
@@ -126,6 +182,8 @@ export default function ScenarioPage() {
     state,
     result,
     delta,
+    hedgedResult,
+    hedgedDelta,
     isBase,
     setIronOre,
     setFx,
@@ -133,7 +191,7 @@ export default function ScenarioPage() {
     reset,
   } = useScenarioAnalysis();
 
-  const explanationCards = buildExplanationCards(state, result, delta);
+  const explanationCards = buildExplanationCards(state, result, delta, hedgedResult, hedgedDelta);
   const activeBadgeText  = getActiveBadgeText(state);
 
   return (
@@ -149,17 +207,17 @@ export default function ScenarioPage() {
         >
           {/* Title block */}
           <div className="space-y-3">
-            <p className="text-[11.5px] font-semibold uppercase tracking-[0.20em] text-[#6B7280]">
+            <p className="text-[11.5px] font-semibold uppercase tracking-[0.20em] text-[#888888]">
               Treasury Risk
             </p>
             <h1
-              className="font-semibold text-[#F5F7FA] leading-none"
-              style={{ fontSize: '50px', letterSpacing: '-0.03em' }}
+              className="font-bold text-[#111111] leading-none"
+              style={{ fontSize: '44px', letterSpacing: '-0.03em' }}
             >
               Scenario Analysis
             </h1>
-            <p className="text-[15px] text-[#6B7280] leading-none">
-              Deterministic stress-testing · Base case P&amp;L · Three risk factors
+            <p className="text-[15px] text-[#888888] leading-none">
+              Deterministic stress-testing · Unhedged &amp; Hedged P&amp;L · Three risk factors
             </p>
           </div>
 
@@ -174,7 +232,7 @@ export default function ScenarioPage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-                  className="flex items-center gap-2 text-[13px] text-[#6B7280]"
+                  className="flex items-center gap-2 text-[13px] text-[#888888]"
                 >
                   <StatusDot variant="success" pulse size="sm" />
                   <span>Base Case</span>
@@ -186,16 +244,16 @@ export default function ScenarioPage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-                  className="flex items-center gap-2 rounded-[10px] px-3 py-2"
+                  className="flex items-center gap-2 rounded-[4px] px-3 py-2"
                   style={{
-                    background: 'rgba(245,158,11,0.08)',
-                    border:     '1px solid rgba(245,158,11,0.18)',
+                    background: 'rgba(217,119,6,0.07)',
+                    border:     '1px solid rgba(217,119,6,0.22)',
                   }}
                 >
                   <StatusDot variant="warning" pulse size="sm" />
                   <span
                     className="text-[12.5px] font-semibold"
-                    style={{ color: '#F59E0B' }}
+                    style={{ color: '#D97706' }}
                   >
                     {activeBadgeText}
                   </span>
@@ -250,16 +308,17 @@ export default function ScenarioPage() {
             result={result}
             delta={delta}
             isBase={isBase}
+            variant="unhedged"
           />
 
-          {/* RIGHT — Hedged P&L (placeholder, ready for future hedge logic) */}
+          {/* RIGHT — Hedged P&L */}
           <PnlCard
             title="Hedged P&L"
-            subtitle="Hedge overlay applied"
-            result={result}
-            delta={delta}
+            subtitle="Commodity futures · Seagull · FFAs"
+            result={hedgedResult}
+            delta={hedgedDelta}
             isBase={isBase}
-            isPlaceholder
+            variant="hedged"
           />
         </motion.div>
 
@@ -271,11 +330,11 @@ export default function ScenarioPage() {
           className="mt-8"
         >
           <SectionTitle
-            title="Scenario Mechanics"
+            title="Hedge Strategy Mechanics"
             subtitle={
               isBase
-                ? 'Select a stress scenario above to see real-time P&L impact'
-                : 'Active scenario impact on revenue, COGS, and EBITDA'
+                ? 'Select a stress scenario above to see real-time unhedged and hedged P&L impact'
+                : 'Active scenario — unhedged exposure vs hedge-adjusted outcome'
             }
             spacing="md"
           />
@@ -300,14 +359,14 @@ export default function ScenarioPage() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.35, delay: 0.18 }}
           className="mt-10 pt-6 pb-6 flex items-center justify-between"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+          style={{ borderTop: '1px solid #E5E5E3' }}
         >
-          <p className="text-[11.5px] text-[#374151] leading-relaxed max-w-3xl">
-            All values in ₹ Cr. Calculations use linear sensitivity coefficients calibrated to known stress cases.
+          <p className="text-[11.5px] text-[#888888] leading-relaxed max-w-3xl">
+            All values in ₹ Cr. Sensitivities calibrated to known stress cases; MILD/MOD scale proportionally.
+            Seagull payoff is a linear approximation between strikes. SG&amp;A held constant across all scenarios.
             Results are for illustrative stress-testing purposes only and do not constitute financial advice.
-            SG&amp;A is held constant across all scenarios.
           </p>
-          <p className="text-[11.5px] text-[#374151]">
+          <p className="text-[11.5px] text-[#888888]">
             {new Date().toLocaleDateString('en-US', {
               day: 'numeric', month: 'long', year: 'numeric',
             })} EST

@@ -1,30 +1,17 @@
 import { TrendingUp, AlertTriangle, Activity, Info, Zap } from 'lucide-react';
 import { cn } from '../../lib/theme';
 
-/* ---------------------------------------------------------------------------
-   Types
-   --------------------------------------------------------------------------- */
-
 export type InsightIcon     = 'trend' | 'risk' | 'signal' | 'info' | 'alert';
 export type InsightSeverity = 'accent' | 'warning' | 'danger' | 'info' | 'neutral';
 
 export interface InsightCardProps {
-  /** Icon type */
   icon?:      InsightIcon;
-  /** Bold compact heading */
   title:      string;
-  /** Explanatory body text */
   body:       string;
-  /** Colour treatment */
   severity?:  InsightSeverity;
-  /** Larger featured card with tinted background */
   featured?:  boolean;
   className?: string;
 }
-
-/* ---------------------------------------------------------------------------
-   Config
-   --------------------------------------------------------------------------- */
 
 const ICON_MAP: Record<InsightIcon, React.ElementType> = {
   trend:  TrendingUp,
@@ -35,58 +22,60 @@ const ICON_MAP: Record<InsightIcon, React.ElementType> = {
 };
 
 const SEVERITY_CONFIG: Record<InsightSeverity, {
-  iconBg:     string;
-  iconColor:  string;
-  labelColor: string;
-  cardBg:     string;
-  cardBorder: string;
+  iconBg:      string;
+  iconColor:   string;
+  labelColor:  string;
+  cardBg:      string;
+  cardBorder:  string;
   hoverBorder: string;
+  barColor:    string;
 }> = {
   accent: {
-    iconBg:      'rgba(245,217,10,0.10)',
-    iconColor:   '#F5D90A',
-    labelColor:  '#A89208',
-    cardBg:      'rgba(245,217,10,0.035)',
-    cardBorder:  'rgba(245,217,10,0.11)',
-    hoverBorder: 'rgba(245,217,10,0.20)',
+    iconBg:      'rgba(255,230,0,0.15)',
+    iconColor:   '#967A00',
+    labelColor:  '#967A00',
+    cardBg:      '#FFFFFF',
+    cardBorder:  '#D8D8D8',
+    hoverBorder: '#B8B8B6',
+    barColor:    '#FFE600',
   },
   warning: {
-    iconBg:      'rgba(245,158,11,0.10)',
-    iconColor:   '#F59E0B',
-    labelColor:  '#D97706',
-    cardBg:      'rgba(245,158,11,0.04)',
-    cardBorder:  'rgba(245,158,11,0.12)',
-    hoverBorder: 'rgba(245,158,11,0.22)',
+    iconBg:      'rgba(217,119,6,0.10)',
+    iconColor:   '#D97706',
+    labelColor:  '#B45309',
+    cardBg:      '#FFFFFF',
+    cardBorder:  '#D8D8D8',
+    hoverBorder: '#B8B8B6',
+    barColor:    '#D97706',
   },
   danger: {
-    iconBg:      'rgba(239,68,68,0.10)',
-    iconColor:   '#EF4444',
-    labelColor:  '#DC2626',
-    cardBg:      'rgba(239,68,68,0.04)',
-    cardBorder:  'rgba(239,68,68,0.12)',
-    hoverBorder: 'rgba(239,68,68,0.22)',
+    iconBg:      'rgba(220,38,38,0.08)',
+    iconColor:   '#DC2626',
+    labelColor:  '#B91C1C',
+    cardBg:      '#FFFFFF',
+    cardBorder:  '#D8D8D8',
+    hoverBorder: '#B8B8B6',
+    barColor:    '#DC2626',
   },
   info: {
-    iconBg:      'rgba(59,130,246,0.10)',
-    iconColor:   '#3B82F6',
-    labelColor:  '#6B7280',
-    cardBg:      '#15171C',
-    cardBorder:  'rgba(255,255,255,0.06)',
-    hoverBorder: 'rgba(255,255,255,0.11)',
+    iconBg:      'rgba(37,99,235,0.08)',
+    iconColor:   '#2563EB',
+    labelColor:  '#888888',
+    cardBg:      '#FFFFFF',
+    cardBorder:  '#D8D8D8',
+    hoverBorder: '#B8B8B6',
+    barColor:    '#2563EB',
   },
   neutral: {
-    iconBg:      'rgba(255,255,255,0.06)',
-    iconColor:   '#6B7280',
-    labelColor:  '#6B7280',
-    cardBg:      '#15171C',
-    cardBorder:  'rgba(255,255,255,0.06)',
-    hoverBorder: 'rgba(255,255,255,0.11)',
+    iconBg:      '#F0F0EE',
+    iconColor:   '#888888',
+    labelColor:  '#888888',
+    cardBg:      '#FFFFFF',
+    cardBorder:  '#D8D8D8',
+    hoverBorder: '#B8B8B6',
+    barColor:    '#D8D8D8',
   },
 };
-
-/* ---------------------------------------------------------------------------
-   InsightCard
-   --------------------------------------------------------------------------- */
 
 export function InsightCard({
   icon     = 'info',
@@ -96,19 +85,19 @@ export function InsightCard({
   featured = false,
   className,
 }: InsightCardProps) {
-  const cfg = SEVERITY_CONFIG[severity];
+  const cfg  = SEVERITY_CONFIG[severity];
   const Icon = ICON_MAP[icon];
 
   return (
     <div
       className={cn(
-        'group flex flex-col rounded-[20px] p-8 transition-all duration-200',
-        featured && 'ring-0',
+        'group relative flex flex-col rounded-[8px] p-7 transition-all duration-200 overflow-hidden',
         className,
       )}
       style={{
-        background: cfg.cardBg,
-        border:     `1px solid ${cfg.cardBorder}`,
+        background:  cfg.cardBg,
+        border:      `1px solid ${cfg.cardBorder}`,
+        boxShadow:   '0 1px 4px rgba(0,0,0,0.05)',
       }}
       onMouseEnter={e => {
         (e.currentTarget as HTMLElement).style.borderColor = cfg.hoverBorder;
@@ -117,14 +106,20 @@ export function InsightCard({
         (e.currentTarget as HTMLElement).style.borderColor = cfg.cardBorder;
       }}
     >
-      <div className="flex items-start gap-4">
+      {/* Top accent bar */}
+      <div
+        className="absolute inset-x-0 top-0 h-[3px]"
+        style={{ background: cfg.barColor }}
+      />
+
+      <div className="flex items-start gap-4 mt-1">
         {/* Icon badge */}
         <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[6px]"
           style={{ background: cfg.iconBg }}
         >
           <Icon
-            className="h-[19px] w-[19px]"
+            className="h-[18px] w-[18px]"
             style={{ color: cfg.iconColor }}
             strokeWidth={1.75}
           />
@@ -133,12 +128,12 @@ export function InsightCard({
         {/* Text */}
         <div className="flex-1 min-w-0 pt-0.5">
           <p
-            className="text-[12px] font-bold uppercase tracking-[0.14em] mb-3 leading-none"
+            className="text-[11px] font-bold uppercase tracking-[0.16em] mb-2.5 leading-none"
             style={{ color: cfg.labelColor }}
           >
             {title}
           </p>
-          <p className="text-[14.5px] leading-[1.65] text-[#A1A8B3]">{body}</p>
+          <p className="text-[13.5px] leading-[1.65] text-[#555555]">{body}</p>
         </div>
       </div>
     </div>

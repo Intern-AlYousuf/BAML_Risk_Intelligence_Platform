@@ -105,13 +105,18 @@ class FXForecastOutput:
     reconstructed from log returns).  ``simulation`` is a standard
     ``MonteCarloResult`` identical in structure to the SOFR simulation result,
     enabling full schema reuse in the API layer.
+
+    ``historical_levels`` carries the raw cleaned spot levels (from the
+    pre-processing pipeline) so that the API layer can embed real historical
+    observations in the chart response without a second data fetch.
     """
-    pair_id:         str
-    forecast:        ForecastResult
-    fitted_order:    tuple[int, int, int]
-    order_was_auto:  bool
-    simulation:      MonteCarloResult | None
-    fit_wall_time_s: float
+    pair_id:           str
+    forecast:          ForecastResult
+    fitted_order:      tuple[int, int, int]
+    order_was_auto:    bool
+    simulation:        MonteCarloResult | None
+    fit_wall_time_s:   float
+    historical_levels: pd.Series | None = None
 
 
 # ── Engine ────────────────────────────────────────────────────────────────────
@@ -272,16 +277,52 @@ class FXForecastEngine:
         )
 
         return FXForecastOutput(
-            pair_id         = pair_id,
-            forecast        = forecast_result,
-            fitted_order    = fitted_order,
-            order_was_auto  = order_was_auto,
-            simulation      = simulation,
-            fit_wall_time_s = fit_elapsed,
+            pair_id           = pair_id,
+            forecast          = forecast_result,
+            fitted_order      = fitted_order,
+            order_was_auto    = order_was_auto,
+            simulation        = simulation,
+            fit_wall_time_s   = fit_elapsed,
+            historical_levels = levels,   # raw spot levels — used by API for chart history
         )
 
 
 # ── Private helpers ───────────────────────────────────────────────────────────
+
+
+def _drift_multiplier(last_level: float, target: float, n_steps: int) -> np.ndarray:
+    """Geometric drift overlay multiplier array.
+
+    Returns a shape-(n_steps,) array where element ``t`` (0-indexed) is the
+    factor by which a level path at step ``t+1`` must be multiplied to impose
+    a smooth directional bias toward *target* at the final step.
+
+    Derivation
+    ----------
+    Total log-drift required over the full horizon::
+
+        drift_total = log(target / last_level)
+
+    At step ``t`` (1-indexed, 1 ≤ t ≤ H) the accumulated drift is::
+
+        drift_t = drift_total * t / H
+
+    The corresponding multiplicative adjustment is::
+
+        multiplier_t = exp(drift_t) = (target / last_level) ^ (t / H)
+
+    Properties
+    ----------
+    - multiplier[0]  ≈ 1 + drift_total/H  (tiny first step, no jump)
+    - multiplier[-1] = target / last_level  (terminal value lands exactly on target
+      for the deterministic P50; MC paths disperse around it stochastically)
+    - Ratio between successive multipliers is constant → smooth, no discontinuities
+    - Preserves ARIMA local shape: the overlay is *multiplicative* on top of the
+      existing log-return dynamics, not a substitution
+    """
+    drift_total = math.log(target / last_level)
+    steps = np.arange(1, n_steps + 1, dtype=float)
+    return np.exp(drift_total * steps / n_steps)
 
 
 def _compute_log_returns(levels: pd.Series) -> pd.Series:
@@ -307,6 +348,12 @@ def _reconstruct_level_forecast(
 
     CI bands are reconstructed analogously using their respective return CIs.
     All level paths are clamped to [pair_config.floor, pair_config.ceiling].
+
+    Drift overlay
+    -------------
+    When ``pair_config.target_terminal_rate`` is set the same geometric
+    drift multiplier applied to Monte Carlo paths is applied here, so the
+    deterministic P50 and its CI bands are consistent with the simulation.
     """
     pts = return_result.points
     n   = len(pts)
@@ -329,6 +376,19 @@ def _reconstruct_level_forecast(
     lvl_hi90 = _to_levels(ret_hi90)
     lvl_lo50 = _to_levels(ret_lo50)
     lvl_hi50 = _to_levels(ret_hi50)
+
+    # ── Directional drift overlay (pair-specific, e.g. INRUSD only) ───────
+    # Multiply every level array by the geometric drift ramp so the
+    # deterministic forecast trends toward pair_config.target_terminal_rate.
+    # The same multiplier is applied to CI bands, preserving their relative
+    # width in log-space while shifting the central tendency.
+    if pair_config.target_terminal_rate is not None and last_level > 0:
+        mult = _drift_multiplier(last_level, pair_config.target_terminal_rate, n)
+        lvl_fc   = np.clip(lvl_fc   * mult, pair_config.floor, pair_config.ceiling)
+        lvl_lo90 = np.clip(lvl_lo90 * mult, pair_config.floor, pair_config.ceiling)
+        lvl_hi90 = np.clip(lvl_hi90 * mult, pair_config.floor, pair_config.ceiling)
+        lvl_lo50 = np.clip(lvl_lo50 * mult, pair_config.floor, pair_config.ceiling)
+        lvl_hi50 = np.clip(lvl_hi50 * mult, pair_config.floor, pair_config.ceiling)
 
     # Guard against NaN (defensive — cumsum of finite returns is always finite)
     for arr in (lvl_fc, lvl_lo90, lvl_hi90, lvl_lo50, lvl_hi50):
@@ -422,6 +482,21 @@ def _run_fx_simulation(
 
     # Clamp to institutional bounds
     level_paths = np.clip(level_paths, pair_config.floor, pair_config.ceiling)
+
+    # ── Directional drift overlay (pair-specific, e.g. INRUSD only) ───────
+    # Apply the same geometric drift multiplier used for the deterministic
+    # forecast so that all downstream statistics (percentile bands, terminal
+    # distribution, histogram, KPI cards) inherit the same directional bias.
+    # Stochastic dispersion is preserved: multiplier is a deterministic scalar
+    # per time step — it shifts the central tendency without collapsing variance.
+    if pair_config.target_terminal_rate is not None and last_level > 0:
+        mult = _drift_multiplier(last_level, pair_config.target_terminal_rate, horizon_bdays)
+        # mult shape: (horizon_bdays,) → broadcast over (n_sims, horizon_bdays)
+        level_paths = np.clip(
+            level_paths * mult[np.newaxis, :],
+            pair_config.floor,
+            pair_config.ceiling,
+        )
 
     # ── Build forecast date index ──────────────────────────────────────────
     fcast_idx: pd.DatetimeIndex = business_days_ahead(

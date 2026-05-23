@@ -50,10 +50,10 @@ const LEVEL_LABELS: Record<StressLevel, string> = {
 function StressSelector({ id, value, onChange, subLabels }: StressSelectorProps) {
   return (
     <div
-      className="flex rounded-[10px] p-[3px] gap-[2px]"
+      className="flex rounded-[4px] p-[3px] gap-[2px]"
       style={{
-        background: 'rgba(255,255,255,0.03)',
-        border:     '1px solid rgba(255,255,255,0.06)',
+        background: '#F0F0EE',
+        border:     '1px solid #D8D8D8',
       }}
       role="tablist"
     >
@@ -69,28 +69,28 @@ function StressSelector({ id, value, onChange, subLabels }: StressSelectorProps)
             onClick={() => onChange(level)}
             className={cn(
               'relative flex-1 flex flex-col items-center justify-center gap-0.5',
-              'rounded-[8px] py-2 px-1.5 transition-colors duration-150 cursor-pointer',
-              isActive ? 'text-black' : 'text-[#A1A8B3] hover:text-[#F5F7FA]',
+              'rounded-[3px] py-2 px-1.5 transition-colors duration-150 cursor-pointer',
+              isActive ? 'text-black' : 'text-[#888888] hover:text-[#555555]',
             )}
           >
             {isActive && (
               <motion.span
                 layoutId={`stress-pill-${id}`}
-                className="absolute inset-0 rounded-[8px]"
-                style={{ background: '#F5D90A' }}
+                className="absolute inset-0 rounded-[3px]"
+                style={{ background: '#FFE600', boxShadow: '0 1px 3px rgba(0,0,0,0.10)' }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+                transition={{ duration: 0.16, ease: [0.2, 0, 0, 1] }}
               />
             )}
-            <span className="relative z-10 text-[11px] font-bold leading-none tracking-[0.06em]">
+            <span className="relative z-10 text-[10.5px] font-bold leading-none tracking-[0.07em]">
               {LEVEL_LABELS[level]}
             </span>
             {sub && (
               <span
                 className={cn(
-                  'relative z-10 text-[9.5px] leading-none tracking-[0.02em]',
-                  isActive ? 'text-black/60' : 'text-[#6B7280]',
+                  'relative z-10 text-[9px] leading-none tracking-[0.02em]',
+                  isActive ? 'text-black/60' : 'text-[#BBBBBB]',
                 )}
               >
                 {sub}
@@ -120,11 +120,10 @@ function ScenarioRow({ icon: Icon, label, hint, children }: ScenarioRowProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Icon
-            className="w-[14px] h-[14px] shrink-0"
-            style={{ color: '#6B7280' }}
+            className="w-[13px] h-[13px] shrink-0 text-[#888888]"
             strokeWidth={1.75}
           />
-          <span className="text-[12px] font-semibold uppercase tracking-[0.1em] text-[#A1A8B3]">
+          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#888888]">
             {label}
           </span>
         </div>
@@ -136,8 +135,8 @@ function ScenarioRow({ icon: Icon, label, hint, children }: ScenarioRowProps) {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -4 }}
               transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-              className="text-[10.5px] font-semibold"
-              style={{ color: '#F59E0B' }}
+              className="text-[10px] font-bold"
+              style={{ color: '#D97706' }}
             >
               {hint}
             </motion.span>
@@ -184,24 +183,24 @@ export function ScenarioControlPanel({
 
   return (
     <div
-      className="flex flex-col rounded-[20px] overflow-hidden"
+      className="flex flex-col rounded-[8px] overflow-hidden"
       style={{
-        background: '#1C1F24',
-        border:     '1px solid rgba(255,255,255,0.08)',
-        boxShadow:  '0 4px 32px rgba(0,0,0,0.5)',
+        background: '#FFFFFF',
+        border:     '1px solid #D8D8D8',
+        boxShadow:  '0 1px 4px rgba(0,0,0,0.06)',
       }}
     >
       {/* Header */}
       <div
         className="px-6 py-5"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+        style={{ borderBottom: '1px solid #E5E5E3' }}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[#6B7280]">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#888888]">
               Stress Controls
             </p>
-            <h3 className="text-[17px] font-semibold text-[#F5F7FA] leading-tight">
+            <h3 className="text-[16px] font-semibold text-[#111111] leading-tight">
               Scenario Engine
             </h3>
           </div>
@@ -212,20 +211,20 @@ export function ScenarioControlPanel({
             transition={{ duration: 0.12, ease: 'easeOut' }}
             onClick={onReset}
             disabled={isBase}
-            className="flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-[11.5px] font-semibold transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            className="flex items-center gap-1.5 rounded-[4px] px-3 py-1.5 text-[11px] font-semibold transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
             style={{
-              background: 'rgba(255,255,255,0.05)',
-              border:     '1px solid rgba(255,255,255,0.09)',
-              color:      '#A1A8B3',
+              background: '#F0F0EE',
+              border:     '1px solid #D8D8D8',
+              color:      '#888888',
             }}
           >
-            <RotateCcw className="w-[11px] h-[11px]" strokeWidth={2.2} />
+            <RotateCcw className="w-[10px] h-[10px]" strokeWidth={2.2} />
             Reset
           </motion.button>
         </div>
 
         {/* Active scenario indicator */}
-        <div className="mt-4">
+        <div className="mt-3.5">
           <AnimatePresence mode="wait">
             {isBase ? (
               <motion.div
@@ -236,8 +235,8 @@ export function ScenarioControlPanel({
                 transition={{ duration: 0.15 }}
                 className="flex items-center gap-2"
               >
-                <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: '#6B7280' }} />
-                <span className="text-[12px] text-[#6B7280]">Base case — no stress applied</span>
+                <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: '#BBBBBB' }} />
+                <span className="text-[11.5px] text-[#888888]">Base case — no stress applied</span>
               </motion.div>
             ) : (
               <motion.div
@@ -248,8 +247,8 @@ export function ScenarioControlPanel({
                 transition={{ duration: 0.15 }}
                 className="flex items-center gap-2"
               >
-                <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: '#F59E0B' }} />
-                <span className="text-[12px] font-medium" style={{ color: '#F59E0B' }}>
+                <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: '#D97706' }} />
+                <span className="text-[11.5px] font-semibold" style={{ color: '#D97706' }}>
                   {state.ironOre !== 'BASE' && `Iron Ore · ${IRON_ORE_PCT[state.ironOre]}% shock`}
                   {state.fx      !== 'BASE' && `FX · ${FX_SPOTS[state.fx].toFixed(1)} INR/USD (+${FX_DEPRECIATION_PCT[state.fx]}%)`}
                   {state.freight !== 'BASE' && `Freight · ${FREIGHT_PCT[state.freight]}% shock`}
@@ -263,65 +262,37 @@ export function ScenarioControlPanel({
       {/* Controls */}
       <div className="flex flex-col gap-6 px-6 py-6">
 
-        <ScenarioRow
-          icon={Layers}
-          label="Iron Ore Price"
-          hint={ironOreHint}
-        >
-          <StressSelector
-            id="ironOre"
-            value={state.ironOre}
-            onChange={onIronOre}
-          />
-          <p className="text-[10.5px] text-[#374151] mt-1.5">
+        <ScenarioRow icon={Layers} label="Iron Ore Price" hint={ironOreHint}>
+          <StressSelector id="ironOre" value={state.ironOre} onChange={onIronOre} />
+          <p className="text-[10px] text-[#BBBBBB] mt-1.5">
             COGS impact: +{(IRON_ORE_SENS * IRON_ORE_PCT[state.ironOre]).toFixed(2)} Cr
           </p>
         </ScenarioRow>
 
-        <div className="h-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
+        <div className="h-px bg-[#E5E5E3]" />
 
-        <ScenarioRow
-          icon={TrendingDown}
-          label="INR / USD Rate"
-          hint={fxHint}
-        >
-          <StressSelector
-            id="fx"
-            value={state.fx}
-            onChange={onFx}
-            subLabels={fxSubLabels}
-          />
-          <p className="text-[10.5px] text-[#374151] mt-1.5">
+        <ScenarioRow icon={TrendingDown} label="INR / USD Rate" hint={fxHint}>
+          <StressSelector id="fx" value={state.fx} onChange={onFx} subLabels={fxSubLabels} />
+          <p className="text-[10px] text-[#BBBBBB] mt-1.5">
             {state.fx === 'BASE'
               ? `Base spot: ${FX_SPOTS.BASE.toFixed(1)} INR/USD`
               : `Spot: ${FX_SPOTS[state.fx].toFixed(1)} · +${FX_DEPRECIATION_PCT[state.fx]}% depreciation`}
           </p>
         </ScenarioRow>
 
-        <div className="h-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
+        <div className="h-px bg-[#E5E5E3]" />
 
-        <ScenarioRow
-          icon={Package}
-          label="Freight Cost"
-          hint={freightHint}
-        >
-          <StressSelector
-            id="freight"
-            value={state.freight}
-            onChange={onFreight}
-          />
-          <p className="text-[10.5px] text-[#374151] mt-1.5">
+        <ScenarioRow icon={Package} label="Freight Cost" hint={freightHint}>
+          <StressSelector id="freight" value={state.freight} onChange={onFreight} />
+          <p className="text-[10px] text-[#BBBBBB] mt-1.5">
             COGS impact: +{(FREIGHT_SENS * FREIGHT_PCT[state.freight]).toFixed(2)} Cr
           </p>
         </ScenarioRow>
       </div>
 
       {/* Footer note */}
-      <div
-        className="px-6 py-4 mt-auto"
-        style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
-      >
-        <p className="text-[10.5px] text-[#374151] leading-relaxed">
+      <div className="px-6 py-4 mt-auto" style={{ borderTop: '1px solid #E5E5E3' }}>
+        <p className="text-[10px] text-[#BBBBBB] leading-relaxed">
           Selecting a scenario resets all others. Combined stresses are planned for a future release.
         </p>
       </div>
