@@ -9,6 +9,7 @@ import {
   ChevronsUpDown,
   Percent,
   ArrowLeftRight,
+  Network,
 } from 'lucide-react';
 import { cn } from '../../lib/theme';
 
@@ -32,6 +33,12 @@ const NAV: NavSection[] = [
       { label: 'Scenario Analysis', href: '/scenario', icon: TrendingUp,     badge: 'LIVE' },
       { label: 'SOFR Forecast',     href: '/sofr',     icon: Percent,        badge: 'NEW'  },
       { label: 'FX Forecast',       href: '/fx',       icon: ArrowLeftRight, badge: 'NEW'  },
+    ],
+  },
+  {
+    label: 'Treasury',
+    items: [
+      { label: 'Netting TMS',       href: '/tms',      icon: Network,        badge: 'NEW'  },
     ],
   },
 ];
