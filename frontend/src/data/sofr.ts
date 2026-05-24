@@ -1,11 +1,19 @@
 /**
  * Precomputed SOFR Monte Carlo forecast data.
  * Replaces live /api/v1/forecast/sofr/monte-carlo calls.
- * All values seeded deterministically — no network dependency at runtime.
  *
- * Reference date : 2026-05-24
- * Spot rate      : 4.30 %
- * Model          : ARIMA(2,1,2) — Fed Funds rate cutting cycle
+ * Calibration reference (2026-05-24):
+ *   Spot rate     : 4.35 %
+ *   12M terminal  : 4.15 %  (−20 bps from spot)
+ *   Vol display   : 20      (annualised vol in bps-label form)
+ *   Prob range    : 205 bps (12M IQR)
+ *   Confidence    : 53 %    (12M)
+ *
+ * Shorter horizons are scaled coherently:
+ *   P50 drift     ∝ T
+ *   Band widths   ∝ √T   (standard MC uncertainty)
+ *   VaR           ∝ √T
+ *   Confidence    decreases with longer horizon
  */
 
 import { generateSyntheticHistory, strSeed } from '@/lib/format';
@@ -17,7 +25,7 @@ import {
 } from './dataUtils';
 import type { Terminal, DistributionPoint } from './dataUtils';
 
-// ── Public types (re-exported for useSofrForecast + page consumers) ───────────
+// ── Public types ───────────────────────────────────────────────────────────────
 
 export type Horizon    = '3M' | '6M' | '12M';
 export type StatSignal = 'positive' | 'negative' | 'warning' | 'neutral';
@@ -40,8 +48,6 @@ export interface PercentileValues {
   p10: number; p25: number; p50: number; p75: number; p90: number;
 }
 
-// ── ChartData point (compatible with ForecastPoint from ForecastChart) ────────
-
 export interface ChartPoint {
   date:      string;
   actual?:   number;
@@ -63,37 +69,52 @@ export interface SofrEntry {
   fittedOrder:        [number, number, number];
 }
 
-// ── Fixed reference values ─────────────────────────────────────────────────────
+// ── Model parameters ───────────────────────────────────────────────────────────
 
-const SPOT       = 4.30; // Current SOFR rate (%)
-const START_DATE = '2026-05-25'; // First forecast business day
+/** Last observed SOFR rate — chart split point / history anchor */
+const SPOT       = 4.35;
+const START_DATE = '2026-05-25';
 const N_SIMS     = 5000;
 
-// Historical lookback = same length as forecast horizon (symmetric chart)
+// Historical window matches forecast window (symmetric chart)
 const BDAYS: Record<Horizon, number> = { '3M': 63, '6M': 126, '12M': 252 };
 
-// Per-horizon configuration
+// ── 12M anchor calibration ─────────────────────────────────────────────────────
+//
+// sigma_12M derived from prob-range target: 205 bps IQR
+//   IQR  = P75 - P25 = 2 × 0.675 × sigma  →  sigma = 1.025 / 0.675 = 1.519
+//
+// Shorter horizons: sigma(T) = sigma_12M × √(T/1)
+//   3M  (T=0.25):  sigma = 1.519 × 0.500 = 0.760
+//   6M  (T=0.50):  sigma = 1.519 × 0.707 = 1.074
+//   12M (T=1.00):  sigma = 1.519 × 1.000 = 1.519
+//
+// P50(T) linearly interpolated from spot → 12M terminal:
+//   3M  P50 = 4.35 + (4.15 − 4.35) × 0.25 = 4.30
+//   6M  P50 = 4.35 + (4.15 − 4.35) × 0.50 = 4.25
+//   12M P50 = 4.15
+
 interface HorizonCfg {
   terminal:  Terminal;
-  annVolPct: number; // annual vol in % (e.g. 2.5)
+  annVolPct: number; // shown in UI as "volatility" metric label
   confPct:   number;
 }
 
 const CFG: Record<Horizon, HorizonCfg> = {
   '3M': {
-    terminal:  { p10: 3.85, p25: 4.05, p50: 4.20, p75: 4.35, p90: 4.55 },
-    annVolPct: 2.5,
-    confPct:   74,
+    terminal: { p10: 3.33, p25: 3.79, p50: 4.30, p75: 4.81, p90: 5.28 },
+    annVolPct: 20,
+    confPct:   68,
   },
   '6M': {
-    terminal:  { p10: 3.50, p25: 3.70, p50: 4.00, p75: 4.30, p90: 4.60 },
-    annVolPct: 3.0,
-    confPct:   71,
+    terminal: { p10: 2.87, p25: 3.53, p50: 4.25, p75: 4.98, p90: 5.63 },
+    annVolPct: 20,
+    confPct:   60,
   },
   '12M': {
-    terminal:  { p10: 2.80, p25: 3.30, p50: 3.75, p75: 4.20, p90: 4.60 },
-    annVolPct: 3.5,
-    confPct:   68,
+    terminal: { p10: 2.20, p25: 3.13, p50: 4.15, p75: 5.18, p90: 6.10 },
+    annVolPct: 20,
+    confPct:   53,
   },
 };
 
@@ -101,19 +122,21 @@ const CFG: Record<Horizon, HorizonCfg> = {
 
 function buildEntry(horizon: Horizon): SofrEntry {
   const { terminal, annVolPct, confPct } = CFG[horizon];
-  const annVol   = Math.min(annVolPct / 100, 0.04); // capped at 4 % decimal
+
+  // History generation: cap at 4 % (original transform: Math.min(vol/100, 0.04))
+  const annVol   = Math.min(annVolPct / 100, 0.04);
   const nBdays   = BDAYS[horizon];
   const histSeed = strSeed(`SOFR-${horizon}-${START_DATE}`);
   const bandSeed = histSeed ^ 0xDEAD;
   const distSeed = histSeed ^ 0xBEEF;
 
-  // ── Historical segment (seeded synthetic, matches generateSyntheticHistory) ──
+  // Historical segment
   const histRaw  = generateSyntheticHistory(START_DATE, SPOT, nBdays, annVol, histSeed);
   const histData: ChartPoint[] = histRaw.map(pt => ({ date: pt.date, actual: pt.actual }));
 
-  // ── Forecast fan-band segment ──────────────────────────────────────────────
-  const fcastDates  = genBusinessDays(START_DATE, nBdays);
-  const bands       = genFanBands(fcastDates, SPOT, terminal, bandSeed);
+  // Forecast fan-band segment
+  const fcastDates   = genBusinessDays(START_DATE, nBdays);
+  const bands        = genFanBands(fcastDates, SPOT, terminal, bandSeed);
   const forecastData: ChartPoint[] = bands.map(b => ({
     date:     b.date,
     forecast: b.forecast,
@@ -126,15 +149,14 @@ function buildEntry(horizon: Horizon): SofrEntry {
   const chartData         = [...histData, ...forecastData];
   const forecastTickDates = genMonthlyTicks(chartData.map(d => d.date));
 
-  // ── Terminal distribution ──────────────────────────────────────────────────
-  // σ calibrated from IQR: (P90 - P10) / (2 × z₀.₉ ≈ 1.282)
-  const sigma           = (terminal.p90 - terminal.p10) / (2 * 1.282);
+  // Terminal distribution — σ back-derived from IQR
+  const sigma            = (terminal.p90 - terminal.p10) / (2 * 1.282);
   const distributionData = genDistribution(terminal.p50, sigma, 30, 2, distSeed);
 
   const percentileValues: PercentileValues = { ...terminal };
   const baseRateRange = { low: terminal.p25, high: terminal.p75 };
 
-  // ── KPI metrics ────────────────────────────────────────────────────────────
+  // KPI metrics
   const delta_bps = Math.round((terminal.p50 - SPOT) * 100);
 
   const projectedDelta =
@@ -159,8 +181,8 @@ function buildEntry(horizon: Horizon): SofrEntry {
     projectedRaw:    terminal.p50,
     projectedDelta,
     projectedSignal,
-    volatility:      String(Math.round(annVolPct)),      // e.g. "3"
-    probRange:       String(Math.round(probRangeRaw * 100)), // bps e.g. "30"
+    volatility:      String(Math.round(annVolPct)),           // "20"
+    probRange:       String(Math.round(probRangeRaw * 100)),  // e.g. "205"
     probRangeRaw,
     confidence:      String(confPct),
     confidenceRaw:   confPct,
@@ -180,7 +202,7 @@ function buildEntry(horizon: Horizon): SofrEntry {
   };
 }
 
-// ── Eagerly computed at module load (no network, no async) ─────────────────────
+// ── Eagerly computed at module load ────────────────────────────────────────────
 
 export const SOFR_DATA: Record<Horizon, SofrEntry> = {
   '3M':  buildEntry('3M'),
