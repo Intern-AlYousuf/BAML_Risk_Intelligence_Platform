@@ -19,7 +19,6 @@ from app.core.exceptions import (
     validation_exception_handler,
 )
 from app.core.logging import configure_logging, get_logger
-from app.db.init_db import check_connection
 from app.db.session import db_manager
 from app.middleware.request_id import RequestIDMiddleware
 from app.middleware.timing import TimingMiddleware
@@ -41,16 +40,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         debug=settings.DEBUG,
     )
 
-    # Fail fast: raise RuntimeError if DB is unreachable before accepting traffic.
-    #await check_connection()
-    
+    # DB connection check is optional — comment out if no database is provisioned.
+    # await check_connection()
 
     if settings.is_production and settings.ENABLE_LIVE_FEEDS:
         logger.info("market_feeds.connecting")
 
     yield
 
-    # Graceful shutdown: return all connections to the pool before the process exits.
+    # Graceful shutdown: dispose the connection pool.
+    # Safe to call even when no DB is configured — dispose() is a no-op on an
+    # engine that has never acquired a real connection.
     await db_manager.close()
     logger.info("application.shutdown", name=settings.APP_NAME)
 
@@ -58,7 +58,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 # ── Application factory ───────────────────────────────────────────────────────
 
 def create_app() -> FastAPI:
-    app = FastAPI(
+    _app = FastAPI(
         title=settings.APP_NAME,
         version=settings.APP_VERSION,
         description=(
@@ -73,11 +73,11 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    _register_middleware(app)
-    _register_exception_handlers(app)
-    _register_routers(app)
+    _register_middleware(_app)
+    _register_exception_handlers(_app)
+    _register_routers(_app)
 
-    return app
+    return _app
 
 
 # ── Middleware registration ───────────────────────────────────────────────────
@@ -91,10 +91,16 @@ def create_app() -> FastAPI:
 def _register_middleware(app: FastAPI) -> None:
     app.add_middleware(GZipMiddleware, minimum_size=1000)
 
+    # When ALLOWED_ORIGINS contains the wildcard "*", credentials must be False.
+    # Browsers reject "Access-Control-Allow-Origin: *" combined with credentials.
+    # For specific-origin lists (e.g. ["https://app.vercel.app"]) credentials can
+    # remain True to support cookie / Authorization header flows.
+    allow_credentials = "*" not in settings.ALLOWED_ORIGINS
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.ALLOWED_ORIGINS,
-        allow_credentials=True,
+        allow_credentials=allow_credentials,
         allow_methods=["*"],
         allow_headers=["*"],
         expose_headers=["X-Request-ID", "X-Process-Time-Ms"],
@@ -117,7 +123,8 @@ def _register_exception_handlers(app: FastAPI) -> None:
 # ── Router registration ───────────────────────────────────────────────────────
 
 def _register_routers(app: FastAPI) -> None:
-    # Root-level health check — used by Render and other platform health probes.
+    # Root-level health checks — used by Render and other platform health probes.
+    # Both /health and /healthz are registered so either probe path works.
     @app.get("/health", tags=["Health"], include_in_schema=True)
     async def root_health() -> dict:
         return {
@@ -125,13 +132,15 @@ def _register_routers(app: FastAPI) -> None:
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
+    @app.get("/healthz", tags=["Health"], include_in_schema=True)
+    async def root_healthz() -> dict:
+        return {"status": "ok"}
+
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 
-@app.get("/healthz")
-def health_check():
-    return {"status": "ok"}
-
 # ── Module-level app instance (used by uvicorn / gunicorn) ───────────────────
+# IMPORTANT: this assignment must come AFTER create_app() is defined.
+# Any @app.get / @app.post decorators must appear after this line.
 
 app = create_app()
