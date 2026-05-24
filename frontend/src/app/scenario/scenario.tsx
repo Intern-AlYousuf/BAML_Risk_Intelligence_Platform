@@ -70,8 +70,8 @@ function buildExplanationCards(
   const active = getActiveFamily(state);
 
   // ── Iron Ore ──────────────────────────────────────────────────────────────
-  const sevUnhedgedShock = (IRON_ORE_UNHEDGED_SENS * 20).toFixed(2);
-  const sevHedgeGain     = (IRON_ORE_HEDGE_GAIN_SENS * 20).toFixed(2);
+  const sevUnhedgedShock = (IRON_ORE_UNHEDGED_SENS   * IRON_ORE_PCT.SEVERE).toFixed(2);
+  const sevHedgeGain     = (IRON_ORE_HEDGE_GAIN_SENS * IRON_ORE_PCT.SEVERE).toFixed(2);
 
   let ironOreBody: string;
   if (active === 'ironOre') {
@@ -92,7 +92,7 @@ function buildExplanationCards(
       `Iron ore price inflation flows directly into raw material COGS. ` +
       `Each +1% shock adds ₹ ${IRON_ORE_UNHEDGED_SENS.toFixed(2)} Cr unhedged. ` +
       `Iron ore futures and pellet premium forwards act as an offset — ` +
-      `at SEVERE (+20%), ₹ ${sevHedgeGain} Cr of hedge gain fully covers the ` +
+      `at SEVERE (+${IRON_ORE_PCT.SEVERE}%), ₹ ${sevHedgeGain} Cr of hedge gain fully covers the ` +
       `₹ ${sevUnhedgedShock} Cr COGS inflation and protects EBITDA above the base case.`;
   }
 

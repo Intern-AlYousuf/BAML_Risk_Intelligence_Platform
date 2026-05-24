@@ -23,6 +23,7 @@ import {
   computeScenarioPnl,
   computePnlDelta,
   BASE_CASE,
+  IRON_ORE_PCT,
 } from '../lib/scenarioEngine';
 
 /* ===========================================================================
@@ -345,7 +346,7 @@ export default function DashboardPage() {
 
     const sensitivityRows: SensitivityRow[] = [
       {
-        scenario:    'Iron Ore +20%',
+        scenario:    'Iron Ore +15%',
         description: 'Raw material cost inflation (severe)',
         ebitdaDelta: ironOreDelta.ebitda,
         marginDelta: ironOreDelta.ebitdaMargin,
@@ -378,7 +379,7 @@ export default function DashboardPage() {
     // Normalise each dimension to 0–100
     const interestRate = Math.round(Math.min(100, (100 - sofrConf) * 1.1));
     const fxRisk       = Math.round(Math.min(100, inrVol * 14));
-    const commodity    = Math.round(Math.min(100, (Math.abs(ironOreDelta.ebitda)  / BASE_CASE.ebitda * 100 / 20) * 100));
+    const commodity    = Math.round(Math.min(100, (Math.abs(ironOreDelta.ebitda)  / BASE_CASE.ebitda * 100 / IRON_ORE_PCT.SEVERE) * 100));
     const freight      = Math.round(Math.min(100, (Math.abs(freightDelta.ebitda) / BASE_CASE.ebitda * 100 / 20) * 100));
     const margin       = Math.round((interestRate + fxRisk + commodity + freight) / 4 * 0.85);
 
@@ -417,7 +418,7 @@ export default function DashboardPage() {
     }
 
     out.push(
-      `Iron ore cost transmission is the dominant EBITDA tail risk — a +20% shock compresses operating income by ₹${Math.round(Math.abs(ironOreDelta.ebitda))} Cr, equivalent to ${(Math.abs(ironOreDelta.ebitda) / BASE_CASE.ebitda * 100).toFixed(1)}% of base EBITDA.`
+      `Iron ore cost transmission is the dominant EBITDA tail risk — a +15% shock compresses operating income by ₹${Math.round(Math.abs(ironOreDelta.ebitda))} Cr, equivalent to ${(Math.abs(ironOreDelta.ebitda) / BASE_CASE.ebitda * 100).toFixed(1)}% of base EBITDA.`
     );
 
     if (sofrM) {
@@ -527,7 +528,7 @@ export default function DashboardPage() {
                 unitPosition="suffix"
                 delta={`${Math.abs(ironOreDelta.ebitdaMargin * 100).toFixed(2)} pp margin compression`}
                 signal="negative"
-                annotation="Iron Ore +20% shock · Largest single-factor EBITDA tail risk"
+                annotation="Iron Ore +15% shock · Largest single-factor EBITDA tail risk"
                 accent="red"
                 size="lg"
                 loading={false}

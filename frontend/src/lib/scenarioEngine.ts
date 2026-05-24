@@ -43,17 +43,17 @@ export interface PnlDelta {
 }
 
 // ─── Iron Ore sensitivities ───────────────────────────────────────────────────
-// Unhedged: at +20% shock, COGS increases ₹368.64 Cr → ₹18.432 Cr per 1%
-//           Verified: COGS = 15823.17, EBITDA = 1777.36 at SEVERE
+// Unhedged: at +15% shock, COGS increases ₹276.48 Cr → ₹18.432 Cr per 1%
+//           Verified: COGS = 15731.01, EBITDA = 1869.52 at SEVERE
 // Hedge gain coefficient derived from:
-//   hedged EBITDA at SEV = 2212.10
-//   shock damage = 2146 − 1777.36 = 368.64
-//   net hedge benefit = 2212.10 − 1777.36 = 434.74
-//   → 434.74 / 20 = 21.737 Cr per 1%
+//   hedged EBITDA at SEV = 2247.66
+//   shock damage = 2146 − 1869.52 = 276.48
+//   net hedge benefit = 2247.66 − 1869.52 = 378.14
+//   → 378.14 / 15 = 25.209 Cr per 1%
 // Instruments: iron ore futures + pellet premium forwards
 
-export const IRON_ORE_UNHEDGED_SENS   = 368.64 / 20;   // 18.432 Cr per 1%
-export const IRON_ORE_HEDGE_GAIN_SENS = 434.74 / 20;   // 21.737 Cr per 1%
+export const IRON_ORE_UNHEDGED_SENS   = 276.48 / 15;   // 18.432 Cr per 1%
+export const IRON_ORE_HEDGE_GAIN_SENS = 378.14 / 15;   // 25.209 Cr per 1%
 
 export const IRON_ORE_SENS = IRON_ORE_UNHEDGED_SENS;   // backward-compat alias
 
@@ -61,7 +61,7 @@ export const IRON_ORE_PCT: Record<StressLevel, number> = {
   BASE:     0,
   MILD:     5,
   MODERATE: 10,
-  SEVERE:   20,
+  SEVERE:   15,
 };
 
 // ─── FX sensitivities ─────────────────────────────────────────────────────────
