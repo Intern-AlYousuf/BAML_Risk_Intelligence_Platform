@@ -5,32 +5,27 @@ const nextConfig: NextConfig = {
    * Standalone output bundles the server + its dependencies into
    * .next/standalone so the Docker runtime stage only needs to copy
    * that directory — no node_modules required in the final image.
+   *
+   * DEMO MODE NOTE: changed to 'export' for Vercel static export.
+   * Revert to 'standalone' when re-enabling Docker / backend proxy.
    */
-  output: 'standalone',
+  // output: 'standalone',   // ← re-enable for Docker deployment
 
   /**
-   * Rewrites proxy /api/* to the backend service.
+   * DEMO MODE: API proxy rewrites are disabled.
+   * All forecast data is served from precomputed static files in src/data/.
+   * No backend or BACKEND_URL environment variable is required.
    *
-   * BACKEND_URL is set at build/runtime in Docker (http://backend:8000).
-   * In local dev without Docker it falls back to http://localhost:8000.
-   *
-   * This means the browser always calls a relative URL (/api/v1/...)
-   * which Next.js forwards to the backend — no CORS issues, works
-   * identically on local, Docker, and Vercel + Railway.
+   * To restore live API mode:
+   *   1. Re-enable the rewrites() block below
+   *   2. Set BACKEND_URL (Docker) or NEXT_PUBLIC_API_URL (Vercel) env vars
+   *   3. Revert useSofrForecast.ts and useFxForecast.ts to the original versions
    */
-  async rewrites() {
-    // Default to 127.0.0.1 rather than localhost: on Windows, Node.js resolves
-    // "localhost" to ::1 (IPv6) before 127.0.0.1 (IPv4).  FastAPI binds only
-    // to 127.0.0.1, so the proxy would get ECONNREFUSED and return 500.
-    const backendUrl =
-      process.env.BACKEND_URL ?? 'http://127.0.0.1:8000';
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${backendUrl}/api/:path*`,
-      },
-    ];
-  },
+  //
+  // async rewrites() {
+  //   const backendUrl = process.env.BACKEND_URL ?? 'http://127.0.0.1:8000';
+  //   return [{ source: '/api/:path*', destination: `${backendUrl}/api/:path*` }];
+  // },
 };
 
 export default nextConfig;

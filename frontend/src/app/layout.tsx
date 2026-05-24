@@ -30,6 +30,28 @@ export default function RootLayout({
         style={{ backgroundColor: '#0B0B0C', color: '#F5F7FA' }}
       >
         {children}
+        {/* ── Demo mode banner ──────────────────────────────────────────── */}
+        <div
+          style={{
+            position:        'fixed',
+            bottom:          0,
+            left:            0,
+            right:           0,
+            zIndex:          9999,
+            backgroundColor: 'rgba(11,11,12,0.88)',
+            backdropFilter:  'blur(6px)',
+            borderTop:       '1px solid rgba(255,255,255,0.06)',
+            padding:         '6px 16px',
+            display:         'flex',
+            alignItems:      'center',
+            justifyContent:  'center',
+            gap:             '8px',
+          }}
+        >
+          <span style={{ fontSize: '11px', color: '#6B7280', letterSpacing: '0.02em' }}>
+            Demonstration environment using precomputed model outputs.
+          </span>
+        </div>
       </body>
     </html>
   );
