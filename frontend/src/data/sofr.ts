@@ -2,26 +2,37 @@
  * Precomputed SOFR Monte Carlo forecast data.
  * Replaces live /api/v1/forecast/sofr/monte-carlo calls.
  *
- * Calibration reference (2026-05-24):
- *   Spot rate     : 4.35 %
- *   12M terminal  : 4.15 %  (−20 bps from spot)
- *   Vol display   : 20      (annualised vol in bps-label form)
- *   Prob range    : 205 bps (12M IQR)
- *   Confidence    : 53 %    (12M)
+ * Calibration reference (2026-05-24) — visually matched to original screenshot:
  *
- * Shorter horizons are scaled coherently:
- *   P50 drift     ∝ T
- *   Band widths   ∝ √T   (standard MC uncertainty)
- *   VaR           ∝ √T
- *   Confidence    decreases with longer horizon
+ *   Spot rate     : 3.51 %   (SOFR as of May 26, 2026 — after Fed cuts)
+ *   12M terminal  : 4.15 %   (+64 bps from spot — mean reversion upward)
+ *   History       : ~4.40 % (Jun 25) → 3.51 % (May 26)   [declining trend]
+ *   Implied Vol   : 20 bps   (ARIMA residual dispersion label)
+ *   Prob Range    : 205 bps  (12M IQR = P75 − P25)
+ *   Confidence    : 53 %     (12M)
+ *
+ * sigma derivation from IQR:
+ *   IQR  = P75 − P25 = 2 × 0.675 × sigma   →  205 bps = 1.35 × sigma
+ *   sigma_12M = 2.05 / 1.35 = 1.519 %
+ *
+ * Shorter horizons — sigma(T) = sigma_12M × √T, P50(T) linear interpolation:
+ *   3M  (T=0.25): sigma = 1.519 × 0.500 = 0.760   P50 = 3.51 + 0.64 × 0.25 = 3.67
+ *   6M  (T=0.50): sigma = 1.519 × 0.707 = 1.074   P50 = 3.51 + 0.64 × 0.50 = 3.83
+ *   12M (T=1.00): sigma = 1.519               P50 = 4.15
+ *
+ * Historical start values (interpolated along the Jun 25 → May 26 decline):
+ *   12M ago (Jun 25): 4.40 %
+ *    6M ago (Nov 25): 3.96 %
+ *    3M ago (Feb 26): 3.73 %
  */
 
-import { generateSyntheticHistory, strSeed } from '@/lib/format';
+import { strSeed } from '@/lib/format';
 import {
   genBusinessDays,
   genFanBands,
   genDistribution,
   genMonthlyTicks,
+  genHistoryDrifted,
 } from './dataUtils';
 import type { Terminal, DistributionPoint } from './dataUtils';
 
@@ -71,48 +82,69 @@ export interface SofrEntry {
 
 // ── Model parameters ───────────────────────────────────────────────────────────
 
-/** Last observed SOFR rate — chart split point / history anchor */
-const SPOT       = 4.35;
+/**
+ * Last observed SOFR rate — chart split point / history anchor.
+ * As of May 26 2026 SOFR is 3.51 % after Fed easing cycle.
+ * The 12M forecast (4.15 %) represents +64 bps mean reversion.
+ */
+const SPOT       = 3.51;
 const START_DATE = '2026-05-25';
 const N_SIMS     = 5000;
 
 // Historical window matches forecast window (symmetric chart)
 const BDAYS: Record<Horizon, number> = { '3M': 63, '6M': 126, '12M': 252 };
 
-// ── 12M anchor calibration ─────────────────────────────────────────────────────
-//
-// sigma_12M derived from prob-range target: 205 bps IQR
-//   IQR  = P75 - P25 = 2 × 0.675 × sigma  →  sigma = 1.025 / 0.675 = 1.519
-//
-// Shorter horizons: sigma(T) = sigma_12M × √(T/1)
-//   3M  (T=0.25):  sigma = 1.519 × 0.500 = 0.760
-//   6M  (T=0.50):  sigma = 1.519 × 0.707 = 1.074
-//   12M (T=1.00):  sigma = 1.519 × 1.000 = 1.519
-//
-// P50(T) linearly interpolated from spot → 12M terminal:
-//   3M  P50 = 4.35 + (4.15 − 4.35) × 0.25 = 4.30
-//   6M  P50 = 4.35 + (4.15 − 4.35) × 0.50 = 4.25
-//   12M P50 = 4.15
+/**
+ * Annualised vol used for history generation.
+ * Using ~8 % gives a visually smooth declining history path
+ * (the ARIMA residual label "20 bps" is a 1-step forecast error, not the
+ * rolling historical vol driving the path generator).
+ */
+const HIST_VOL   = 0.08;
+
+/**
+ * Forecast P50 path noise amplitude in log-space.
+ * Higher value → choppier MC mean path (matches SOFR original screenshot).
+ */
+const FORECAST_NOISE = 0.0028;
 
 interface HorizonCfg {
+  histStart: number;  // approximate SOFR at the start of the lookback window
   terminal:  Terminal;
-  annVolPct: number; // shown in UI as "volatility" metric label
+  annVolPct: number;  // shown in UI as "volatility" metric label
   confPct:   number;
 }
 
+// ── Horizon configurations ─────────────────────────────────────────────────────
+//
+// 12M terminals (sigma_12M = 1.519):
+//   P10 = 4.15 − 1.282 × 1.519 = 2.203   P90 = 4.15 + 1.282 × 1.519 = 6.097
+//   P25 = 4.15 − 0.675 × 1.519 = 3.125   P75 = 4.15 + 0.675 × 1.519 = 5.175
+//
+// 6M terminals (sigma_6M = 1.074):
+//   P10 = 3.83 − 1.282 × 1.074 = 2.454   P90 = 3.83 + 1.282 × 1.074 = 5.207
+//   P25 = 3.83 − 0.675 × 1.074 = 3.105   P75 = 3.83 + 0.675 × 1.074 = 4.555
+//
+// 3M terminals (sigma_3M = 0.760):
+//   P10 = 3.67 − 1.282 × 0.760 = 2.695   P90 = 3.67 + 1.282 × 0.760 = 4.644
+//   P25 = 3.67 − 0.675 × 0.760 = 3.157   P75 = 3.67 + 0.675 × 0.760 = 4.183
+
 const CFG: Record<Horizon, HorizonCfg> = {
   '3M': {
-    terminal: { p10: 3.33, p25: 3.79, p50: 4.30, p75: 4.81, p90: 5.28 },
+    histStart: 3.73,
+    terminal:  { p10: 2.70, p25: 3.16, p50: 3.67, p75: 4.18, p90: 4.64 },
     annVolPct: 20,
     confPct:   68,
   },
   '6M': {
-    terminal: { p10: 2.87, p25: 3.53, p50: 4.25, p75: 4.98, p90: 5.63 },
+    histStart: 3.96,
+    terminal:  { p10: 2.45, p25: 3.11, p50: 3.83, p75: 4.56, p90: 5.21 },
     annVolPct: 20,
     confPct:   60,
   },
   '12M': {
-    terminal: { p10: 2.20, p25: 3.13, p50: 4.15, p75: 5.18, p90: 6.10 },
+    histStart: 4.40,
+    terminal:  { p10: 2.20, p25: 3.13, p50: 4.15, p75: 5.18, p90: 6.10 },
     annVolPct: 20,
     confPct:   53,
   },
@@ -121,22 +153,23 @@ const CFG: Record<Horizon, HorizonCfg> = {
 // ── Builder ────────────────────────────────────────────────────────────────────
 
 function buildEntry(horizon: Horizon): SofrEntry {
-  const { terminal, annVolPct, confPct } = CFG[horizon];
+  const { histStart, terminal, annVolPct, confPct } = CFG[horizon];
 
-  // History generation: cap at 4 % (original transform: Math.min(vol/100, 0.04))
-  const annVol   = Math.min(annVolPct / 100, 0.04);
   const nBdays   = BDAYS[horizon];
   const histSeed = strSeed(`SOFR-${horizon}-${START_DATE}`);
   const bandSeed = histSeed ^ 0xDEAD;
   const distSeed = histSeed ^ 0xBEEF;
 
-  // Historical segment
-  const histRaw  = generateSyntheticHistory(START_DATE, SPOT, nBdays, annVol, histSeed);
+  // Historical segment — drifted GBM from histStart → SPOT
+  const histRaw  = genHistoryDrifted(
+    START_DATE, SPOT, histStart, nBdays,
+    HIST_VOL, histSeed,
+  );
   const histData: ChartPoint[] = histRaw.map(pt => ({ date: pt.date, actual: pt.actual }));
 
-  // Forecast fan-band segment
+  // Forecast fan-band segment — SOFR mean-reverts upward from SPOT → terminal.p50
   const fcastDates   = genBusinessDays(START_DATE, nBdays);
-  const bands        = genFanBands(fcastDates, SPOT, terminal, bandSeed);
+  const bands        = genFanBands(fcastDates, SPOT, terminal, bandSeed, FORECAST_NOISE);
   const forecastData: ChartPoint[] = bands.map(b => ({
     date:     b.date,
     forecast: b.forecast,
@@ -164,6 +197,7 @@ function buildEntry(horizon: Horizon): SofrEntry {
     delta_bps  > 0  ? `+${delta_bps} bps` :
                       `${delta_bps} bps`;
 
+  // Rising SOFR means tighter monetary conditions → 'negative' signal
   const projectedSignal: StatSignal =
     delta_bps < -5 ? 'positive' :
     delta_bps >  5 ? 'negative' :
@@ -182,7 +216,7 @@ function buildEntry(horizon: Horizon): SofrEntry {
     projectedDelta,
     projectedSignal,
     volatility:      String(Math.round(annVolPct)),           // "20"
-    probRange:       String(Math.round(probRangeRaw * 100)),  // e.g. "205"
+    probRange:       String(Math.round(probRangeRaw * 100)),  // "205"
     probRangeRaw,
     confidence:      String(confPct),
     confidenceRaw:   confPct,
