@@ -174,7 +174,7 @@ export function ScenarioControlPanel({
     : undefined;
 
   const fxHint = state.fx !== 'BASE'
-    ? `${FX_SPOTS[state.fx].toFixed(1)} INR/USD (+${FX_DEPRECIATION_PCT[state.fx]}%)`
+    ? `USD/INR ${FX_SPOTS[state.fx].toFixed(1)} (+${FX_DEPRECIATION_PCT[state.fx]}%)`
     : undefined;
 
   const freightHint = state.freight !== 'BASE'
@@ -250,7 +250,7 @@ export function ScenarioControlPanel({
                 <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: '#D97706' }} />
                 <span className="text-[11.5px] font-semibold" style={{ color: '#D97706' }}>
                   {state.ironOre !== 'BASE' && `Iron Ore · ${IRON_ORE_PCT[state.ironOre]}% shock`}
-                  {state.fx      !== 'BASE' && `FX · ${FX_SPOTS[state.fx].toFixed(1)} INR/USD (+${FX_DEPRECIATION_PCT[state.fx]}%)`}
+                  {state.fx      !== 'BASE' && `FX · USD/INR ${FX_SPOTS[state.fx].toFixed(1)} (+${FX_DEPRECIATION_PCT[state.fx]}%)`}
                   {state.freight !== 'BASE' && `Freight · ${FREIGHT_PCT[state.freight]}% shock`}
                 </span>
               </motion.div>
@@ -271,11 +271,11 @@ export function ScenarioControlPanel({
 
         <div className="h-px bg-[#E5E5E3]" />
 
-        <ScenarioRow icon={TrendingDown} label="INR / USD Rate" hint={fxHint}>
+        <ScenarioRow icon={TrendingDown} label="USD / INR Rate" hint={fxHint}>
           <StressSelector id="fx" value={state.fx} onChange={onFx} subLabels={fxSubLabels} />
           <p className="text-[10px] text-[#BBBBBB] mt-1.5">
             {state.fx === 'BASE'
-              ? `Base spot: ${FX_SPOTS.BASE.toFixed(1)} INR/USD`
+              ? `Base spot: USD/INR ${FX_SPOTS.BASE.toFixed(1)}`
               : `Spot: ${FX_SPOTS[state.fx].toFixed(1)} · +${FX_DEPRECIATION_PCT[state.fx]}% depreciation`}
           </p>
         </ScenarioRow>

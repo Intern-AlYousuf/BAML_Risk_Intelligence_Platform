@@ -14,7 +14,6 @@ import { PageContainer } from '../components/layout/PageContainer';
 import { StatCard }       from '../components/cards/StatCard';
 import { ChartCard }      from '../components/cards/ChartCard';
 import { SectionTitle }   from '../components/ui/sectiontile';
-import { StatusDot }      from '../components/ui/badge';
 
 import { useSofrForecast }    from '../hooks/useSofrForecast';
 import { useFxForecast }      from '../hooks/useFxForecast';
@@ -180,10 +179,7 @@ function InterpretationPanel({ insights }: { insights: string[] }) {
       </div>
 
       <div className="px-9 py-4" style={{ borderTop: '1px solid #E5E5E3' }}>
-        <div className="flex items-center gap-2">
-          <StatusDot variant="success" pulse size="sm" />
-          <p className="text-[11.5px] text-[#888888]">Signals updated on data load · Not AI-generated</p>
-        </div>
+        <p className="text-[11.5px] text-[#888888]">Signals updated on data load · Not AI-generated</p>
       </div>
     </div>
   );
@@ -352,7 +348,7 @@ export default function DashboardPage() {
         riskLevel:   riskLevel(Math.abs(ironOreDelta.ebitda) / BASE_CASE.ebitda * 100, false),
       },
       {
-        scenario:    'INR/USD @ 101.5',
+        scenario:    'USD/INR @ 101.5',
         description: 'Moderate INR depreciation (+5.7%)',
         ebitdaDelta: fxDelta.ebitda,
         marginDelta: fxDelta.ebitdaMargin,
@@ -408,11 +404,11 @@ export default function DashboardPage() {
 
     if (inrM) {
       if (inrM.projectedSignal === 'negative') {
-        out.push(`INR/USD projects ${inrM.projectedDelta} from current spot — INR depreciation supports export revenue uplift but increases USD-denominated input cost exposure across COGS.`);
+        out.push(`USD/INR projects ${inrM.projectedDelta} from current spot — INR depreciation supports export revenue uplift but increases USD-denominated input cost exposure across COGS.`);
       } else if (inrM.projectedSignal === 'positive') {
-        out.push(`INR/USD projects ${inrM.projectedDelta} appreciation — a favourable macro signal that compresses import costs while slightly reducing export revenue in INR terms.`);
+        out.push(`USD/INR projects ${inrM.projectedDelta} — a favourable macro signal that compresses import costs while slightly reducing export revenue in INR terms.`);
       } else {
-        out.push(`INR/USD outlook is broadly stable vs spot — limited FX-driven revenue or cost variance is expected over the 12-month horizon.`);
+        out.push(`USD/INR outlook is broadly stable vs spot — limited FX-driven revenue or cost variance is expected over the 12-month horizon.`);
       }
     }
 
@@ -430,7 +426,7 @@ export default function DashboardPage() {
     }
 
     if (ngnM) {
-      out.push(`NGN/USD projects ${ngnM.projectedDelta} with ${ngnM.volatility}% annualised volatility — elevated structural depreciation pressure remains the base case; monitor CBN policy and FX reserve dynamics.`);
+      out.push(`USD/NGN projects ${ngnM.projectedDelta} with ${ngnM.volatility}% annualised volatility — elevated structural depreciation pressure remains the base case; monitor CBN policy and FX reserve dynamics.`);
     }
 
     return out;
@@ -469,12 +465,7 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-2 text-[13px] text-[#888888]">
-            <StatusDot
-              variant={anyLoading ? 'neutral' : 'success'}
-              pulse={!anyLoading}
-              size="sm"
-            />
-            <span>{anyLoading ? 'Loading…' : 'Live'}</span>
+            {anyLoading && <span>Loading…</span>}
           </div>
         </motion.div>
 
@@ -509,13 +500,13 @@ export default function DashboardPage() {
                 loading={sofrLoading && !sofrM}
               />
 
-              {/* INR/USD */}
+              {/* USD/INR */}
               <StatCard
-                label="INR/USD 12M Outlook"
+                label="USD/INR 12M Outlook"
                 value={inrM?.projectedRate ?? '—'}
                 delta={inrM?.projectedDelta}
                 signal={inrM?.projectedSignal ?? 'neutral'}
-                annotation={inrM ? `Vol: ${inrM.volatility}% ann. · ${inrM.projectedSignal === 'negative' ? 'Moderate INR weakness' : inrM.projectedSignal === 'positive' ? 'Mild appreciation' : 'Stable outlook'}` : undefined}
+                annotation={inrM ? `Vol: ${inrM.volatility}% ann. · ${inrM.projectedSignal === 'negative' ? 'Moderate USD/INR upside' : inrM.projectedSignal === 'positive' ? 'Mild INR appreciation' : 'Stable outlook'}` : undefined}
                 accent="amber"
                 size="lg"
                 loading={inrLoading && !inrM}
@@ -638,7 +629,7 @@ export default function DashboardPage() {
               />
               <ForecastSummaryCard
                 uid="inr"
-                title="INR/USD · 12M Horizon"
+                title="USD/INR · 12M Horizon"
                 value={inrM?.projectedRate ?? '—'}
                 volLabel={inrM?.volatility ? `${inrM.volatility}%` : undefined}
                 confidence={inrM?.confidence}
@@ -648,7 +639,7 @@ export default function DashboardPage() {
               />
               <ForecastSummaryCard
                 uid="ngn"
-                title="NGN/USD · 12M Horizon"
+                title="USD/NGN · 12M Horizon"
                 value={ngnM?.projectedRate ?? '—'}
                 volLabel={ngnM?.volatility ? `${ngnM.volatility}%` : undefined}
                 confidence={ngnM?.confidence}
@@ -711,8 +702,8 @@ export default function DashboardPage() {
                 title="Instrument Coverage"
                 items={[
                   'SOFR overnight benchmark rate',
-                  'NGN/USD exchange rate',
-                  'INR/USD exchange rate',
+                  'USD/NGN exchange rate',
+                  'USD/INR exchange rate',
                   'EUR/INR cross-currency pair',
                 ]}
               />
@@ -736,13 +727,9 @@ export default function DashboardPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.35, delay: 0.24 }}
-          className="mt-12 pt-6 pb-6 flex items-center justify-between"
+          className="mt-12 pt-6 pb-6 flex items-center justify-end"
           style={{ borderTop: '1px solid #E5E5E3' }}
         >
-          <p className="text-[11.5px] text-[#888888] max-w-lg">
-            BAML Risk Intelligence Platform · Forecasts are model outputs and not investment advice.
-            Scenario computations are deterministic and based on calibrated historical sensitivity factors.
-          </p>
           <p className="text-[11.5px] text-[#888888]">
             {new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })} EST
           </p>

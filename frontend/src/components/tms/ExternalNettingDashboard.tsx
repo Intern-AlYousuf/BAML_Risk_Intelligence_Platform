@@ -666,8 +666,7 @@ function TreasuryIntelligenceCard() {
 
       <div className="px-5 py-3" style={{ borderTop: '1px solid #F0F0EE' }}>
         <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em]" style={{ color: '#BBBBBB' }}>
-          <span className="h-[5px] w-[5px] rounded-full bg-[#16A34A] animate-pulse" />
-          Simulated intelligence — T+0 cycle
+          Simulated environment · T+0 netting cycle
         </span>
       </div>
     </div>
@@ -716,7 +715,6 @@ function SettlementQueue() {
           className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.07em] px-2.5 py-1.5 rounded-[4px]"
           style={{ background: 'rgba(37,99,235,0.08)', color: '#1D4ED8', border: '1px solid rgba(37,99,235,0.20)' }}
         >
-          <span className="h-[5px] w-[5px] rounded-full bg-[#2563EB] animate-pulse" />
           3 Active
         </span>
       </div>

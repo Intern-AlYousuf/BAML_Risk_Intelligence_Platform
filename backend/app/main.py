@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import AsyncGenerator
 
 from fastapi import FastAPI
@@ -116,6 +117,14 @@ def _register_exception_handlers(app: FastAPI) -> None:
 # ── Router registration ───────────────────────────────────────────────────────
 
 def _register_routers(app: FastAPI) -> None:
+    # Root-level health check — used by Render and other platform health probes.
+    @app.get("/health", tags=["Health"], include_in_schema=True)
+    async def root_health() -> dict:
+        return {
+            "status": "ok",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 

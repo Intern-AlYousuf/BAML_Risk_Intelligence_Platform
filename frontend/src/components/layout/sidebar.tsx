@@ -31,7 +31,7 @@ const NAV: NavSection[] = [
     label: 'Analytics',
     items: [
       { label: 'Overview',          href: '/',         icon: LayoutDashboard },
-      { label: 'Scenario Analysis', href: '/scenario', icon: TrendingUp,     badge: 'LIVE' },
+      { label: 'Scenario Analysis', href: '/scenario', icon: TrendingUp },
       { label: 'SOFR Forecast',     href: '/sofr',     icon: Percent,        badge: 'NEW'  },
       { label: 'FX Forecast',       href: '/fx',       icon: ArrowLeftRight, badge: 'NEW'  },
     ],

@@ -137,18 +137,7 @@ const HORIZON_HIST_BDAYS: Record<Horizon, number> = {
   '12M': 252,
 };
 
-/**
- * Absolute backend URL — bypasses the Next.js proxy entirely.
- *
- * WHY: On Windows, Node.js resolves "localhost" to ::1 (IPv6) before
- * 127.0.0.1 (IPv4). FastAPI binds only to 127.0.0.1, so the proxy
- * gets ECONNREFUSED and returns 500. Using 127.0.0.1 directly forces
- * IPv4 and avoids the resolution race.
- *
- * CORS: The backend allows http://localhost:3000 as an origin, so
- * calling cross-origin from the dev server is safe.
- */
-const BACKEND = 'http://127.0.0.1:8000';
+const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000';
 
 /* ---------------------------------------------------------------------------
    Helpers
@@ -191,7 +180,6 @@ async function safeReadJson(res: Response): Promise<unknown> {
   try {
     return JSON.parse(text);
   } catch {
-    console.warn('[useSofrForecast] response body is not valid JSON — first 300 chars:', text.slice(0, 300));
     return null;
   }
 }
@@ -376,24 +364,11 @@ export function useSofrForecast(horizon: Horizon) {
     try {
       const days = HORIZON_DAYS[horizon];
 
-      // Absolute URL — bypasses the Next.js proxy (localhost → ::1 issue on Windows).
-      // See BACKEND constant above for rationale.
       const url = `${BACKEND}/api/v1/forecast/sofr/monte-carlo?horizon=${days}&n_simulations=5000`;
-
-      console.log('[SOFR fetch URL]', url);
 
       const res = await fetch(url);
 
-      // Read body as text → parse JSON manually so non-JSON error pages are
-      // handled gracefully instead of throwing inside res.json().
       const bodyJson = await safeReadJson(res);
-
-      console.log('[useSofrForecast] raw response:', {
-        status:  res.status,
-        ok:      res.ok,
-        horizon,
-        body:    bodyJson,
-      });
 
       // ── HTTP error ───────────────────────────────────────────────────────
       if (!res.ok) {
@@ -404,7 +379,6 @@ export function useSofrForecast(horizon: Horizon) {
             ? detail
             : `API error ${res.status} — ${res.statusText}`;
 
-        console.error('[useSofrForecast] HTTP error:', res.status, detail ?? res.statusText);
         throw new Error(msg);
       }
 
@@ -413,11 +387,6 @@ export function useSofrForecast(horizon: Horizon) {
       try {
         data = transform(bodyJson as MonteCarloResponse, horizon);
       } catch (transformErr) {
-        console.error(
-          '[useSofrForecast] transform() failed:',
-          transformErr,
-          '\nRaw body:', bodyJson,
-        );
         throw new Error(
           `Failed to parse forecast response: ${
             transformErr instanceof Error ? transformErr.message : String(transformErr)
@@ -429,7 +398,6 @@ export function useSofrForecast(horizon: Horizon) {
 
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
-      console.error('[useSofrForecast] fetch failed:', error.message);
       setState(prev => ({ ...prev, loading: false, error }));
     }
   }, [horizon]);

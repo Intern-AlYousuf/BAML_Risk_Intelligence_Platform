@@ -116,7 +116,6 @@ export function TreasuryInsights({ variant = 'internal' }: TreasuryInsightsProps
           className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em]"
           style={{ color: '#BBBBBB' }}
         >
-          <span className="h-[5px] w-[5px] rounded-full bg-[#16A34A] animate-pulse" />
           Simulated treasury analysis — T+0
         </span>
       </div>

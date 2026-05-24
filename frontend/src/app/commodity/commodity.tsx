@@ -17,27 +17,9 @@ import { VolatilityDashboard } from '../../components/commodity/VolatilityDashbo
 function DataStamp() {
   return (
     <div className="flex items-center gap-4 shrink-0">
-      {/* LIVE chip */}
-      <div
-        className="flex items-center gap-2 px-3 py-1.5 rounded-[4px]"
-        style={{ background: '#FFFFFF', border: '1px solid #D8D8D8' }}
-      >
-        <span className="h-[6px] w-[6px] rounded-full bg-[#16A34A] animate-pulse" />
-        <span className="text-[10.5px] font-bold uppercase tracking-[0.09em]" style={{ color: '#333333' }}>
-          LIVE
-        </span>
-      </div>
-      {/* Model badge */}
-      <span
-        className="inline-flex items-center px-3 py-1.5 rounded-[4px] text-[10.5px] font-black uppercase tracking-[0.10em]"
-        style={{
-          background: 'rgba(255,230,0,0.12)',
-          color:      '#967A00',
-          border:     '1px solid rgba(255,230,0,0.35)',
-        }}
-      >
-        GARCH(1,1)
-      </span>
+      <p className="text-[11.5px] text-[#888888]">
+        {new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })} EST
+      </p>
     </div>
   );
 }
@@ -127,8 +109,7 @@ export function CommodityPage() {
           <div className="flex items-center gap-2.5">
             <Cpu className="w-[12px] h-[12px]" style={{ color: '#BBBBBB' }} strokeWidth={1.5} />
             <p className="text-[11px]" style={{ color: '#BBBBBB' }}>
-              All calculations are performed client-side using historical local CSV datasets. No live market data feeds.
-              GARCH(1,1) model — for institutional procurement risk reference only. Not investment advice.
+              All calculations are performed client-side using historical CSV datasets · GARCH(1,1) volatility model · Institutional procurement risk analytics
             </p>
           </div>
         </motion.div>

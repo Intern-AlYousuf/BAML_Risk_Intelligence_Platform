@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  RefreshCw, AlertTriangle,
-  Activity, AlertCircle, ChevronRight,
+  RefreshCw, AlertTriangle, ChevronRight,
 } from 'lucide-react';
 
 import { AppShell }         from '@/components/layout/AppShell';
@@ -15,7 +14,6 @@ import { InsightCard }       from '@/components/cards/InsightCard';
 import { ForecastChart, FORECAST_LEGEND } from '@/components/charts/ForecastChart';
 import { DistributionChart } from '@/components/charts/DistributionCharrt';
 import { SegmentedControl }  from '@/components/ui/segmentedcontrol';
-import { StatusDot }         from '@/components/ui/badge';
 import { Button }            from '@/components/ui/button';
 import { SectionTitle }      from '@/components/ui/sectiontile';
 import {
@@ -29,8 +27,8 @@ import {
    --------------------------------------------------------------------------- */
 
 const PAIR_OPTIONS = [
-  { label: 'NGN/USD', value: 'NGNUSD' as CurrencyPair },
-  { label: 'INR/USD', value: 'INRUSD' as CurrencyPair },
+  { label: 'USD/NGN', value: 'NGNUSD' as CurrencyPair },
+  { label: 'USD/INR', value: 'INRUSD' as CurrencyPair },
   { label: 'EUR/INR', value: 'EURINR' as CurrencyPair },
 ];
 
@@ -41,8 +39,8 @@ const HORIZON_OPTIONS = [
 ];
 
 const PAIR_LABELS: Record<CurrencyPair, string> = {
-  NGNUSD: 'NGN/USD',
-  INRUSD: 'INR/USD',
+  NGNUSD: 'USD/NGN',
+  INRUSD: 'USD/INR',
   EURINR: 'EUR/INR',
 };
 
@@ -63,7 +61,7 @@ const INSIGHTS: Record<CurrencyPair, Record<Horizon, InsightDef[]>> = {
       {
         icon: 'trend', severity: 'danger',
         title: 'Structural Depreciation Risk',
-        body:  'NGN/USD continues to face structural selling pressure driven by Nigeria\'s external account deficit and limited FX reserves relative to import cover. Near-term depreciation remains the base case.',
+        body:  'USD/NGN continues to face structural upside pressure driven by Nigeria\'s external account deficit and limited FX reserves relative to import cover. Near-term NGN depreciation remains the base case.',
       },
       {
         icon: 'risk', severity: 'warning',
@@ -117,7 +115,7 @@ const INSIGHTS: Record<CurrencyPair, Record<Horizon, InsightDef[]>> = {
       {
         icon: 'trend', severity: 'accent',
         title: 'Moderate Volatility Regime',
-        body:  'INR/USD is forecast to trade within a moderate volatility band over the 3M horizon, supported by India\'s robust reserve buffer and RBI\'s active intervention framework.',
+        body:  'USD/INR is forecast to trade within a moderate volatility band over the 3M horizon, supported by India\'s robust reserve buffer and RBI\'s active intervention framework.',
       },
       {
         icon: 'signal', severity: 'neutral',
@@ -383,7 +381,7 @@ export default function FXPage() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
-          className="flex items-end justify-between mb-14"
+          className="flex items-end justify-between mb-6"
         >
           {/* Title block */}
           <div className="space-y-3">
@@ -403,16 +401,6 @@ export default function FXPage() {
 
           {/* Controls */}
           <div className="flex items-center gap-3">
-            {/* Live status */}
-            <div className="flex items-center gap-2 text-[13px] text-[#888888] mr-1">
-              <StatusDot
-                variant={loading ? 'neutral' : error ? 'danger' : 'success'}
-                pulse={!loading && !error}
-                size="sm"
-              />
-              <span>{loading ? 'Loading…' : error ? 'Offline' : 'Live'}</span>
-            </div>
-
             {/* Currency pair selector */}
             <SegmentedControl
               options={PAIR_OPTIONS}
@@ -439,6 +427,61 @@ export default function FXPage() {
             >
               Refresh
             </Button>
+          </div>
+        </motion.div>
+
+        {/* ── Methodology Strip ─────────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.22, delay: 0.03, ease: [0.2, 0, 0, 1] }}
+          className="mb-10 pb-5 flex items-center justify-between"
+          style={{ borderBottom: '1px solid #E5E5E3' }}
+        >
+          {/* Label sequence with yellow dot separators */}
+          <div className="flex items-center">
+            {[
+              'ARIMA Forecasting Engine',
+              'Monte Carlo Simulation',
+              `${nSims.toLocaleString()} Scenario Paths`,
+              'P10 · P50 · P90 Confidence Bands',
+            ].map((item, i, arr) => (
+              <span key={item} className="flex items-center">
+                <span
+                  className="text-[10px] font-bold uppercase tracking-[0.15em]"
+                  style={{ color: '#777777' }}
+                >
+                  {item}
+                </span>
+                {i < arr.length - 1 && (
+                  <span
+                    className="mx-4 h-[5px] w-[5px] rounded-full shrink-0 inline-block"
+                    style={{ background: '#E6B800' }}
+                  />
+                )}
+              </span>
+            ))}
+          </div>
+          {/* Compact model tags */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span
+              className="text-[9px] font-black uppercase tracking-[0.11em] px-2.5 py-[4px] rounded-[3px]"
+              style={{ background: 'rgba(230,184,0,0.12)', border: '1px solid rgba(230,184,0,0.32)', color: '#967A00' }}
+            >
+              ARIMA
+            </span>
+            <span
+              className="text-[9px] font-black uppercase tracking-[0.11em] px-2.5 py-[4px] rounded-[3px]"
+              style={{ background: '#F0F0EE', border: '1px solid #D8D8D8', color: '#555555' }}
+            >
+              MONTE CARLO
+            </span>
+            <span
+              className="text-[9px] font-black uppercase tracking-[0.11em] px-2.5 py-[4px] rounded-[3px]"
+              style={{ background: '#F0F0EE', border: '1px solid #D8D8D8', color: '#555555' }}
+            >
+              {nSims.toLocaleString()} PATHS
+            </span>
           </div>
         </motion.div>
 
@@ -491,18 +534,31 @@ export default function FXPage() {
             transition={{ duration: 0.28, delay: 0.04, ease: [0.2, 0, 0, 1] }}
           >
             <ChartCard
-              title={`${pairLabel} Rate Trajectory · ${horizon}`}
+              title={`${pairLabel} Currency Forecast · ${horizon}`}
               subtitle={`Exchange rate forecast · Confidence bands from ${nSims.toLocaleString()} Monte Carlo paths`}
               legend={FORECAST_LEGEND}
               height={520}
               loading={loading && !chartData.length}
               actions={
-                <div
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-[8px] text-[12px] text-[#888888]"
-                  style={{ background: '#F0F0EE', border: '1px solid #D8D8D8' }}
-                >
-                  <AlertCircle className="h-3.5 w-3.5 opacity-60" strokeWidth={1.5} />
-                  ARIMA + MC
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="text-[9px] font-black uppercase tracking-[0.10em] px-2.5 py-[4px] rounded-[3px]"
+                    style={{ background: 'rgba(230,184,0,0.13)', border: '1px solid rgba(230,184,0,0.32)', color: '#967A00' }}
+                  >
+                    ARIMA
+                  </span>
+                  <span
+                    className="text-[9px] font-black uppercase tracking-[0.10em] px-2.5 py-[4px] rounded-[3px]"
+                    style={{ background: '#F0F0EE', border: '1px solid #D8D8D8', color: '#555555' }}
+                  >
+                    MONTE CARLO
+                  </span>
+                  <span
+                    className="text-[9px] font-black uppercase tracking-[0.10em] px-2.5 py-[4px] rounded-[3px]"
+                    style={{ background: '#F0F0EE', border: '1px solid #D8D8D8', color: '#888888' }}
+                  >
+                    {nSims.toLocaleString()} PATHS
+                  </span>
                 </div>
               }
             >
@@ -571,6 +627,60 @@ export default function FXPage() {
             />
           </motion.div>
 
+          {/* ── 3b. Model Explanation Panel ─────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, delay: 0.10, ease: [0.2, 0, 0, 1] }}
+          >
+            <div
+              className="flex items-start gap-6 px-7 py-5 rounded-[8px]"
+              style={{ background: '#FAFAF8', border: '1px solid #E5E5E3', borderLeft: '3px solid #E6B800' }}
+            >
+              {/* Left: methodology tags */}
+              <div className="shrink-0 flex flex-col gap-2 pt-0.5 min-w-[120px]">
+                <p className="text-[9px] font-black uppercase tracking-[0.18em]" style={{ color: '#C9A800' }}>
+                  Forecast Engine
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  <span
+                    className="text-[9px] font-black uppercase tracking-[0.10em] px-2 py-[3px] rounded-[2px] text-center"
+                    style={{ background: 'rgba(230,184,0,0.12)', border: '1px solid rgba(230,184,0,0.30)', color: '#967A00' }}
+                  >
+                    ARIMA
+                  </span>
+                  <span
+                    className="text-[9px] font-black uppercase tracking-[0.10em] px-2 py-[3px] rounded-[2px] text-center"
+                    style={{ background: '#F0F0EE', border: '1px solid #D8D8D8', color: '#555555' }}
+                  >
+                    MONTE CARLO
+                  </span>
+                  <span
+                    className="text-[9px] font-black uppercase tracking-[0.10em] px-2 py-[3px] rounded-[2px] text-center"
+                    style={{ background: '#F0F0EE', border: '1px solid #D8D8D8', color: '#888888' }}
+                  >
+                    {nSims.toLocaleString()} PATHS
+                  </span>
+                </div>
+              </div>
+              {/* Divider */}
+              <div className="self-stretch w-px shrink-0" style={{ background: '#E5E5E3' }} />
+              {/* Right: explanation */}
+              <p className="text-[13px] leading-[1.75]" style={{ color: '#555555' }}>
+                Forecasts combine{' '}
+                <span className="font-semibold" style={{ color: '#111111' }}>ARIMA trend estimation</span>
+                {' '}with{' '}
+                <span className="font-semibold" style={{ color: '#111111' }}>Monte Carlo stochastic simulation</span>
+                {' '}to model forward exchange-rate uncertainty and terminal distribution ranges.
+                Each run generates{' '}
+                <span className="font-semibold" style={{ color: '#111111' }}>{nSims.toLocaleString()} independent price paths</span>
+                {' '}from the ARIMA residual distribution, producing P10–P90 confidence bands that
+                quantify the full spectrum of plausible outcomes across the selected horizon.
+                The terminal distribution histogram reflects the density of simulated endpoint rates.
+              </p>
+            </div>
+          </motion.div>
+
           {/* ── 4. Distribution + Percentiles ───────────────────────────── */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -585,12 +695,19 @@ export default function FXPage() {
               height={400}
               loading={loading && !distributionData.length}
               actions={
-                <div
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-[8px] text-[12px] text-[#888888]"
-                  style={{ background: '#F0F0EE', border: '1px solid #D8D8D8' }}
-                >
-                  <Activity className="h-3.5 w-3.5 opacity-60" strokeWidth={1.5} />
-                  Monte Carlo
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="text-[9px] font-black uppercase tracking-[0.10em] px-2.5 py-[4px] rounded-[3px]"
+                    style={{ background: '#F0F0EE', border: '1px solid #D8D8D8', color: '#555555' }}
+                  >
+                    TERMINAL DIST.
+                  </span>
+                  <span
+                    className="text-[9px] font-black uppercase tracking-[0.10em] px-2.5 py-[4px] rounded-[3px]"
+                    style={{ background: '#F0F0EE', border: '1px solid #D8D8D8', color: '#888888' }}
+                  >
+                    {nSims.toLocaleString()} PATHS
+                  </span>
                 </div>
               }
             >
@@ -655,13 +772,9 @@ export default function FXPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.35, delay: 0.2 }}
-          className="mt-12 pt-6 pb-6 flex items-center justify-between"
+          className="mt-12 pt-6 pb-6 flex items-center justify-end"
           style={{ borderTop: '1px solid #E5E5E3' }}
         >
-          <p className="text-[11.5px] text-[#888888] max-w-lg">
-            BAML Risk Intelligence Platform · FX forecasts are model outputs and not
-            investment advice. Past model performance does not guarantee future accuracy.
-          </p>
           <p className="text-[11.5px] text-[#888888]">
             {new Date().toLocaleDateString('en-US', {
               day: 'numeric', month: 'long', year: 'numeric',

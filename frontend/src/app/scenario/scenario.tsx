@@ -111,11 +111,11 @@ function buildExplanationCards(
     // delta.cogs is the unhedged COGS change; hedgedDelta.cogs is the hedged COGS change
     // Both are pre-computed via the percentage-depreciation engine.
     fxBody =
-      `At ${spot.toFixed(1)} INR/USD (+${depPct}% depreciation), exports gain ₹ ${delta.revenue.toFixed(2)} Cr ` +
+      `At USD/INR ${spot.toFixed(1)} (+${depPct}% depreciation), exports gain ₹ ${delta.revenue.toFixed(2)} Cr ` +
       `while unhedged imports rise ₹ ${delta.cogs.toFixed(2)} Cr ` +
       `(unhedged EBITDA: ${formatCr(result.ebitda)}, ${formatDeltaCr(delta.ebitda)}). ` +
       `The zero-cost seagull (${seagullDesc}) delivers a ₹ ${payoff.toFixed(2)} option payoff, ` +
-      `locking the effective import rate at ${effectiveRate.toFixed(1)} INR/USD. ` +
+      `locking the effective import rate at USD/INR ${effectiveRate.toFixed(1)}. ` +
       `Hedged COGS inflation: ₹ ${hedgedDelta.cogs.toFixed(2)} Cr. ` +
       `Hedged EBITDA: ${formatCr(hedgedResult.ebitda)} (${formatDeltaCr(hedgedDelta.ebitda)} vs base).`;
   } else {
@@ -124,8 +124,8 @@ function buildExplanationCards(
       `USD-denominated imports become costlier. ` +
       `Sensitivities: ₹ 57.13 Cr revenue uplift and ₹ 46.07 Cr COGS inflation per 1% depreciation (calibrated at ${SEV_FX_DEPR_PCT}%). ` +
       `A zero-cost long seagull (${seagullDesc}) caps the effective import rate — ` +
-      `at SEVERE (${sevSpot.toFixed(1)} INR/USD, +${FX_DEPRECIATION_PCT.SEVERE}%) the option delivers ` +
-      `a ₹ ${sevPayoff.toFixed(2)} payoff, locking import costs at ${sevEffRate.toFixed(1)} INR/USD ` +
+      `at SEVERE (USD/INR ${sevSpot.toFixed(1)}, +${FX_DEPRECIATION_PCT.SEVERE}%) the option delivers ` +
+      `a ₹ ${sevPayoff.toFixed(2)} payoff, locking import costs at USD/INR ${sevEffRate.toFixed(1)} ` +
       `while exports benefit fully from depreciation.`;
   }
 
@@ -168,7 +168,7 @@ function buildExplanationCards(
 
 function getActiveBadgeText(state: ScenarioState): string | null {
   if (state.ironOre !== 'BASE') return `Iron Ore · +${IRON_ORE_PCT[state.ironOre]}%`;
-  if (state.fx      !== 'BASE') return `FX · ${FX_SPOTS[state.fx].toFixed(1)} INR/USD (+${FX_DEPRECIATION_PCT[state.fx]}%)`;
+  if (state.fx      !== 'BASE') return `FX · USD/INR ${FX_SPOTS[state.fx].toFixed(1)} (+${FX_DEPRECIATION_PCT[state.fx]}%)`;
   if (state.freight !== 'BASE') return `Freight · +${FREIGHT_PCT[state.freight]}%`;
   return null;
 }

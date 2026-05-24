@@ -115,16 +115,6 @@ export function TmsPage() {
               </p>
             </div>
 
-            {/* Live indicator */}
-            <div
-              className="flex items-center gap-2 px-4 py-2.5 rounded-[6px] shrink-0"
-              style={{ background: '#FFFFFF', border: '1px solid #D8D8D8' }}
-            >
-              <span className="h-[7px] w-[7px] rounded-full bg-[#16A34A] animate-pulse" />
-              <span className="text-[11.5px] font-bold uppercase tracking-[0.07em]" style={{ color: '#333333' }}>
-                Simulated · T+0
-              </span>
-            </div>
           </div>
         </motion.div>
 

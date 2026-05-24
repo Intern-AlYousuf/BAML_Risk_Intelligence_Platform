@@ -137,7 +137,7 @@ const HORIZON_HIST_BDAYS: Record<Horizon, number> = {
   '12M': 252,
 };
 
-const BACKEND = 'http://127.0.0.1:8000';
+const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000';
 
 /* ---------------------------------------------------------------------------
    Helpers
@@ -170,7 +170,6 @@ async function safeReadJson(res: Response): Promise<unknown> {
   try {
     return JSON.parse(text);
   } catch {
-    console.warn('[useFxForecast] response body is not valid JSON — first 300 chars:', text.slice(0, 300));
     return null;
   }
 }
@@ -368,19 +367,9 @@ export function useFxForecast(pair: CurrencyPair, horizon: Horizon) {
       const days = HORIZON_DAYS[horizon];
       const url  = `${BACKEND}/api/v1/forecast/fx/monte-carlo?pair=${pair}&horizon=${days}&n_simulations=5000`;
 
-      console.log('[FX fetch URL]', url);
-
       const res = await fetch(url);
 
       const bodyJson = await safeReadJson(res);
-
-      console.log('[useFxForecast] raw response:', {
-        status: res.status,
-        ok:     res.ok,
-        pair,
-        horizon,
-        body:   bodyJson,
-      });
 
       if (!res.ok) {
         const body   = bodyJson as Record<string, unknown> | null;
@@ -390,7 +379,6 @@ export function useFxForecast(pair: CurrencyPair, horizon: Horizon) {
             ? detail
             : `API error ${res.status} — ${res.statusText}`;
 
-        console.error('[useFxForecast] HTTP error:', res.status, detail ?? res.statusText);
         throw new Error(msg);
       }
 
@@ -398,11 +386,6 @@ export function useFxForecast(pair: CurrencyPair, horizon: Horizon) {
       try {
         data = transform(bodyJson as FXMonteCarloResponse, pair, horizon);
       } catch (transformErr) {
-        console.error(
-          '[useFxForecast] transform() failed:',
-          transformErr,
-          '\nRaw body:', bodyJson,
-        );
         throw new Error(
           `Failed to parse FX forecast response: ${
             transformErr instanceof Error ? transformErr.message : String(transformErr)
@@ -414,7 +397,6 @@ export function useFxForecast(pair: CurrencyPair, horizon: Horizon) {
 
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
-      console.error('[useFxForecast] fetch failed:', error.message);
       setState(prev => ({ ...prev, loading: false, error }));
     }
   }, [pair, horizon]);

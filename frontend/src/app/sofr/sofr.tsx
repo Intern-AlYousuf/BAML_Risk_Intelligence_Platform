@@ -3,9 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  RefreshCw, AlertTriangle,
-  Activity, AlertCircle,
-  ChevronRight,
+  RefreshCw, AlertTriangle, ChevronRight,
 } from 'lucide-react';
 
 import { AppShell }           from '@/components/layout/AppShell';
@@ -16,7 +14,6 @@ import { InsightCard }         from '@/components/cards/InsightCard';
 import { ForecastChart, FORECAST_LEGEND } from '@/components/charts/ForecastChart';
 import { DistributionChart }   from '@/components/charts/DistributionCharrt';
 import { SegmentedControl }    from '@/components/ui/segmentedcontrol';
-import { StatusDot }           from '@/components/ui/badge';
 import { Button }              from '@/components/ui/button';
 import { SectionTitle }        from '@/components/ui/sectiontile';
 import { useSofrForecast, type Horizon } from '@/hooks/useSofrForecast';
@@ -26,9 +23,9 @@ import { useSofrForecast, type Horizon } from '@/hooks/useSofrForecast';
    --------------------------------------------------------------------------- */
 
 const HORIZON_OPTIONS = [
-  { label: '3M',  value: '3M'  as Horizon },
-  { label: '6M',  value: '6M'  as Horizon },
-  { label: '12M', value: '12M' as Horizon },
+  { label: '90D',  value: '3M'  as Horizon },
+  { label: '180D', value: '6M'  as Horizon },
+  { label: '12M',  value: '12M' as Horizon },
 ];
 
 /* ---------------------------------------------------------------------------
@@ -269,7 +266,7 @@ export default function SOFRPage() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
-          className="flex items-end justify-between mb-14"
+          className="flex items-end justify-between mb-6"
         >
           {/* Title block */}
           <div className="space-y-3">
@@ -289,16 +286,6 @@ export default function SOFRPage() {
 
           {/* Controls */}
           <div className="flex items-center gap-3">
-            {/* Live status */}
-            <div className="flex items-center gap-2 text-[13px] text-[#888888] mr-1">
-              <StatusDot
-                variant={loading ? 'neutral' : error ? 'danger' : 'success'}
-                pulse={!loading && !error}
-                size="sm"
-              />
-              <span>{loading ? 'Loading…' : error ? 'Offline' : 'Live'}</span>
-            </div>
-
             {/* Horizon selector */}
             <SegmentedControl
               options={HORIZON_OPTIONS}
@@ -317,6 +304,61 @@ export default function SOFRPage() {
             >
               Refresh
             </Button>
+          </div>
+        </motion.div>
+
+        {/* ── Methodology Strip ───────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.22, delay: 0.03, ease: [0.2, 0, 0, 1] }}
+          className="mb-10 pb-5 flex items-center justify-between"
+          style={{ borderBottom: '1px solid #E5E5E3' }}
+        >
+          {/* Label sequence with yellow dot separators */}
+          <div className="flex items-center">
+            {[
+              'ARIMA Rate Forecasting',
+              'Monte Carlo Path Generation',
+              `${nSims.toLocaleString()} Simulation Paths`,
+              'Interest Rate Probability Bands',
+            ].map((item, i, arr) => (
+              <span key={item} className="flex items-center">
+                <span
+                  className="text-[10px] font-bold uppercase tracking-[0.15em]"
+                  style={{ color: '#777777' }}
+                >
+                  {item}
+                </span>
+                {i < arr.length - 1 && (
+                  <span
+                    className="mx-4 h-[5px] w-[5px] rounded-full shrink-0 inline-block"
+                    style={{ background: '#E6B800' }}
+                  />
+                )}
+              </span>
+            ))}
+          </div>
+          {/* Compact model tags */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span
+              className="text-[9px] font-black uppercase tracking-[0.11em] px-2.5 py-[4px] rounded-[3px]"
+              style={{ background: 'rgba(230,184,0,0.12)', border: '1px solid rgba(230,184,0,0.32)', color: '#967A00' }}
+            >
+              ARIMA
+            </span>
+            <span
+              className="text-[9px] font-black uppercase tracking-[0.11em] px-2.5 py-[4px] rounded-[3px]"
+              style={{ background: '#F0F0EE', border: '1px solid #D8D8D8', color: '#555555' }}
+            >
+              MONTE CARLO
+            </span>
+            <span
+              className="text-[9px] font-black uppercase tracking-[0.11em] px-2.5 py-[4px] rounded-[3px]"
+              style={{ background: '#F0F0EE', border: '1px solid #D8D8D8', color: '#555555' }}
+            >
+              {nSims.toLocaleString()} PATHS
+            </span>
           </div>
         </motion.div>
 
@@ -369,18 +411,31 @@ export default function SOFRPage() {
             transition={{ duration: 0.28, delay: 0.04, ease: [0.2, 0, 0, 1] }}
           >
             <ChartCard
-              title={`Rate Trajectory · ${horizon}`}
+              title={`SOFR Forecast · ${horizon}`}
               subtitle={`SOFR overnight rate · Confidence bands from ${nSims.toLocaleString()} Monte Carlo paths`}
               legend={FORECAST_LEGEND}
               height={520}
               loading={loading && !chartData.length}
               actions={
-                <div
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-[8px] text-[12px] text-[#888888]"
-                  style={{ background: '#F0F0EE', border: '1px solid #D8D8D8' }}
-                >
-                  <AlertCircle className="h-3.5 w-3.5 opacity-60" strokeWidth={1.5} />
-                  ARIMA + MC
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="text-[9px] font-black uppercase tracking-[0.10em] px-2.5 py-[4px] rounded-[3px]"
+                    style={{ background: 'rgba(230,184,0,0.13)', border: '1px solid rgba(230,184,0,0.32)', color: '#967A00' }}
+                  >
+                    ARIMA
+                  </span>
+                  <span
+                    className="text-[9px] font-black uppercase tracking-[0.10em] px-2.5 py-[4px] rounded-[3px]"
+                    style={{ background: '#F0F0EE', border: '1px solid #D8D8D8', color: '#555555' }}
+                  >
+                    MONTE CARLO
+                  </span>
+                  <span
+                    className="text-[9px] font-black uppercase tracking-[0.10em] px-2.5 py-[4px] rounded-[3px]"
+                    style={{ background: '#F0F0EE', border: '1px solid #D8D8D8', color: '#888888' }}
+                  >
+                    {nSims.toLocaleString()} PATHS
+                  </span>
                 </div>
               }
             >
@@ -452,6 +507,60 @@ export default function SOFRPage() {
             />
           </motion.div>
 
+          {/* ── 3b. Model Explanation Panel ──────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, delay: 0.10, ease: [0.2, 0, 0, 1] }}
+          >
+            <div
+              className="flex items-start gap-6 px-7 py-5 rounded-[8px]"
+              style={{ background: '#FAFAF8', border: '1px solid #E5E5E3', borderLeft: '3px solid #E6B800' }}
+            >
+              {/* Left: methodology tags */}
+              <div className="shrink-0 flex flex-col gap-2 pt-0.5 min-w-[120px]">
+                <p className="text-[9px] font-black uppercase tracking-[0.18em]" style={{ color: '#C9A800' }}>
+                  Forecast Engine
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  <span
+                    className="text-[9px] font-black uppercase tracking-[0.10em] px-2 py-[3px] rounded-[2px] text-center"
+                    style={{ background: 'rgba(230,184,0,0.12)', border: '1px solid rgba(230,184,0,0.30)', color: '#967A00' }}
+                  >
+                    ARIMA
+                  </span>
+                  <span
+                    className="text-[9px] font-black uppercase tracking-[0.10em] px-2 py-[3px] rounded-[2px] text-center"
+                    style={{ background: '#F0F0EE', border: '1px solid #D8D8D8', color: '#555555' }}
+                  >
+                    MONTE CARLO
+                  </span>
+                  <span
+                    className="text-[9px] font-black uppercase tracking-[0.10em] px-2 py-[3px] rounded-[2px] text-center"
+                    style={{ background: '#F0F0EE', border: '1px solid #D8D8D8', color: '#888888' }}
+                  >
+                    {nSims.toLocaleString()} PATHS
+                  </span>
+                </div>
+              </div>
+              {/* Divider */}
+              <div className="self-stretch w-px shrink-0" style={{ background: '#E5E5E3' }} />
+              {/* Right: explanation */}
+              <p className="text-[13px] leading-[1.75]" style={{ color: '#555555' }}>
+                The SOFR projection framework combines{' '}
+                <span className="font-semibold" style={{ color: '#111111' }}>ARIMA rate forecasting</span>
+                {' '}with{' '}
+                <span className="font-semibold" style={{ color: '#111111' }}>Monte Carlo path generation</span>
+                {' '}to estimate forward interest-rate dispersion and scenario probability bands.
+                Each run draws{' '}
+                <span className="font-semibold" style={{ color: '#111111' }}>{nSims.toLocaleString()} stochastic rate paths</span>
+                {' '}from the ARIMA residual distribution, producing a full P10–P90 terminal fan
+                that captures the plausible range of Fed policy outcomes across the selected horizon.
+                The distribution histogram reflects the probability mass of simulated endpoint rates.
+              </p>
+            </div>
+          </motion.div>
+
           {/* ── 4. Distribution + Percentiles ────────────────────────── */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -466,12 +575,19 @@ export default function SOFRPage() {
               height={400}
               loading={loading && !distributionData.length}
               actions={
-                <div
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-[8px] text-[12px] text-[#888888]"
-                  style={{ background: '#F0F0EE', border: '1px solid #D8D8D8' }}
-                >
-                  <Activity className="h-3.5 w-3.5 opacity-60" strokeWidth={1.5} />
-                  Monte Carlo
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="text-[9px] font-black uppercase tracking-[0.10em] px-2.5 py-[4px] rounded-[3px]"
+                    style={{ background: '#F0F0EE', border: '1px solid #D8D8D8', color: '#555555' }}
+                  >
+                    TERMINAL DIST.
+                  </span>
+                  <span
+                    className="text-[9px] font-black uppercase tracking-[0.10em] px-2.5 py-[4px] rounded-[3px]"
+                    style={{ background: '#F0F0EE', border: '1px solid #D8D8D8', color: '#888888' }}
+                  >
+                    {nSims.toLocaleString()} PATHS
+                  </span>
                 </div>
               }
             >
@@ -535,13 +651,9 @@ export default function SOFRPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.35, delay: 0.2 }}
-          className="mt-12 pt-6 pb-6 flex items-center justify-between"
+          className="mt-12 pt-6 pb-6 flex items-center justify-end"
           style={{ borderTop: '1px solid #E5E5E3' }}
         >
-          <p className="text-[11.5px] text-[#888888] max-w-lg">
-            BAML Risk Intelligence Platform · SOFR forecasts are model outputs and not
-            investment advice. Past model performance does not guarantee future accuracy.
-          </p>
           <p className="text-[11.5px] text-[#888888]">
             {new Date().toLocaleDateString('en-US', {
               day: 'numeric', month: 'long', year: 'numeric',
