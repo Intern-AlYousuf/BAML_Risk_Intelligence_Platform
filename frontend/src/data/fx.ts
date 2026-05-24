@@ -13,9 +13,9 @@
  *           history: 1520  (Jun-25) → 1365 (May-26)   smooth downward trend
  *           forecast: very wide bands (P10=644, P90=2035), choppy P50 line
  *
- *  EUR/INR  spot = 111.20  → 12M P50 = 111.55   (+0.3%)  vol = 6.82%  VaR = 13.18  conf = 81%
- *           history: 94.00 (Jun-25) → peaks ~116-118 (Feb-Mar 26) → 111.20 (May-26)
- *           arch-shaped trajectory (uses peakBump parameter)
+ *  EUR/INR  spot = 111.20  → 12M P50 = 111.55   (+0.3%)  vol = 6.0%   VaR = 6.50   conf = 80%
+ *           history: 96.00 (Jun-25) → monotonic upward trend → 111.20 (May-26)
+ *           strictly never exceeds 112; sideways flat forecast regime
  *
  * ── sigma derivations ──────────────────────────────────────────────────────────
  *
@@ -25,8 +25,8 @@
  *  USD/NGN  sigma_12M = 892.52 / 1.645 = 542.57
  *           sigma_6M  = 542.57 × √0.50 = 383.60  sigma_3M = 542.57 × √0.25 = 271.29
  *
- *  EUR/INR  sigma_12M = 13.18 / 1.645 = 8.012
- *           sigma_6M  = 8.012 × √0.50 = 5.664    sigma_3M = 8.012 × √0.25 = 4.006
+ *  EUR/INR  sigma_12M = 6.50 / 1.645 = 3.950    (target VaR95 ≈ 6.50, tighter sideways bands)
+ *           sigma_6M  = 3.950 × √0.50 = 2.794    sigma_3M = 3.950 × √0.25 = 1.975
  *
  *  Percentile formula:
  *    P50(T) = spot + (P50_12M − spot) × T
@@ -115,25 +115,22 @@ const BDAYS: Record<Horizon, number> = { '3M': 63, '6M': 126, '12M': 252 };
 const HIST_NOISE: Record<CurrencyPair, number> = {
   INRUSD: 0.0075,  // tight oscillations ±~0.7% of price — matches INR screenshot
   NGNUSD: 0.0090,  // smooth NGN history — small oscillations on a big downtrend
-  EURINR: 0.0240,  // visible oscillations ±~2.4% — matches EUR/INR noisy rise
+  EURINR: 0.0060,  // gentle oscillations ±~0.67% — keeps line below 112 ceiling
 };
 
 const FORECAST_NOISE: Record<CurrencyPair, number> = {
   INRUSD: 0.0030,  // moderately noisy forecast path
   NGNUSD: 0.0380,  // very choppy P50 — matches NGN reference screenshot exactly
-  EURINR: 0.0080,  // mildly noisy forecast
+  EURINR: 0.0070,  // sideways regime — visible oscillation, no directional pull
 };
 
-// EUR/INR arch: history rises from ~94 to a peak of ~116-118, then settles at 111.20.
-// Per-horizon values scale the arch to match the visible portion of the peak.
+// EUR/INR history is a monotonic upward trend (no arch peak).
+// Setting all PEAK_BUMP values to 0 keeps the history strictly rising from
+// histStart → spot without exceeding the 112 ceiling.
 const PEAK_BUMP: Record<CurrencyPair, Record<Horizon, number>> = {
   INRUSD: { '3M': 0, '6M': 0, '12M': 0 },
   NGNUSD: { '3M': 0, '6M': 0, '12M': 0 },
-  EURINR: {
-    '3M':  3,   // 3M history (Feb-May 26) shows modest arch
-    '6M':  8,   // 6M history (Nov 25-May 26) shows clearer arch
-    '12M': 14,  // 12M history (Jun 25-May 26): full arch, peak reaches ~116-118
-  },
+  EURINR: { '3M': 0, '6M': 0, '12M': 0 },
 };
 
 interface PairHorizonCfg {
@@ -152,7 +149,7 @@ interface PairHorizonCfg {
 //
 //   USD/INR  12M ago ≈ 84.00   6M ago ≈ 90.00   3M ago ≈ 93.00
 //   USD/NGN  12M ago ≈ 1520    6M ago ≈ 1443     3M ago ≈ 1404
-//   EUR/INR  12M ago ≈ 94.00   6M ago ≈ 102.60   3M ago ≈ 106.90
+//   EUR/INR  12M ago ≈ 96.00   6M ago ≈ 103.60   3M ago ≈ 107.40
 
 const PAIR_CFG: Record<CurrencyPair, Record<Horizon, PairHorizonCfg>> = {
 
@@ -211,33 +208,37 @@ const PAIR_CFG: Record<CurrencyPair, Record<Horizon, PairHorizonCfg>> = {
   },
 
   // ── EUR/INR ──────────────────────────────────────────────────────────────────
-  //  Arch-shaped history (rises to a peak ~116-118 before settling at 111.20).
-  //  sigma_12M = 13.18 / 1.645 = 8.012
+  //  Monotonic upward history (96 → 111.20), strictly below 112 ceiling.
+  //  Sideways flat forecast regime with moderate uncertainty expansion.
   //
-  //  12M: P50=111.55  P25=106.14  P75=116.96  P10=101.28  P90=121.82
-  //  6M:  P50=111.38  P25=107.56  P75=115.20  P10=104.12  P90=118.64
-  //  3M:  P50=111.29  P25=108.58  P75=113.99  P10=106.15  P90=116.43
+  //  sigma_12M = 6.50 / 1.645 = 3.950  (tighter bands → sideways regime)
+  //  sigma_6M  = 3.950 × √0.50 = 2.794
+  //  sigma_3M  = 3.950 × √0.25 = 1.975
+  //
+  //  12M: P50=111.55  P25=108.88  P75=114.22  P10=106.49  P90=116.61  VaR=6.50
+  //  6M:  P50=111.38  P25=109.49  P75=113.27  P10=107.80  P90=114.96
+  //  3M:  P50=111.29  P25=109.96  P75=112.62  P10=108.76  P90=113.82
   EURINR: {
     '3M': {
       spot:      111.20,
-      histStart: 106.90,
-      terminal:  { p10: 106.15, p25: 108.58, p50: 111.29, p75: 113.99, p90: 116.43 },
-      annVolPct: 6.82,
-      confPct:   78,
+      histStart: 107.40,   // Feb-26: 96 + (111.20−96)×0.75
+      terminal:  { p10: 108.76, p25: 109.96, p50: 111.29, p75: 112.62, p90: 113.82 },
+      annVolPct: 6.0,
+      confPct:   84,
     },
     '6M': {
       spot:      111.20,
-      histStart: 102.60,
-      terminal:  { p10: 104.12, p25: 107.56, p50: 111.38, p75: 115.20, p90: 118.64 },
-      annVolPct: 6.82,
-      confPct:   74,
+      histStart: 103.60,   // Nov-25: 96 + (111.20−96)×0.50
+      terminal:  { p10: 107.80, p25: 109.49, p50: 111.38, p75: 113.27, p90: 114.96 },
+      annVolPct: 6.0,
+      confPct:   82,
     },
     '12M': {
       spot:      111.20,
-      histStart: 94.00,
-      terminal:  { p10: 101.28, p25: 106.14, p50: 111.55, p75: 116.96, p90: 121.82 },
-      annVolPct: 6.82,
-      confPct:   81,
+      histStart: 96.00,    // Jun-25: start of 12M lookback
+      terminal:  { p10: 106.49, p25: 108.88, p50: 111.55, p75: 114.22, p90: 116.61 },
+      annVolPct: 6.0,
+      confPct:   80,
     },
   },
 };
