@@ -1,41 +1,39 @@
 /**
- * Precomputed FX Monte Carlo forecast data.
- * Replaces live /api/v1/forecast/fx/monte-carlo calls.
+ * Precomputed FX forecast data — fully deterministic, no random generation.
  *
- * Calibration reference (2026-05-24) — visually matched to original screenshots:
+ * Visual trajectories are calibrated to match the original reference screenshots.
+ * All "noise" is produced by deterministic sine-wave harmonics in dataUtils.ts.
  *
- *   USD/INR  spot ≈ 95.90 → 12M P50 = 101.23  (+5.7%)   vol = 4.33%   VaR95 = 7.56    conf = 87%
- *            history: ~84.00 (Jun 25) → 95.90 (May 26)  [rising trend]
+ * ── Calibration reference (2026-05-24) ────────────────────────────────────────
  *
- *   USD/NGN  spot ≈ 1365  → 12M P50 = 1339.45  (−2.2%)  vol = 29.58%  VaR95 = 892.52  conf = 40%
- *            history: ~1520 (Jun 25) → 1365 (May 26)    [declining trend]
+ *  USD/INR  spot = 95.90   → 12M P50 = 101.23  (+5.7%)   vol = 4.33%  VaR = 7.56   conf = 87%
+ *           history: 84.00 (Jun-25) → 95.90 (May-26)  steady upward trend, noisy
  *
- *   EUR/INR  spot ≈ 111.20 → 12M P50 = 111.55  (+0.3%)  vol = 6.82%   VaR95 = 13.18   conf = 81%
- *            history: ~94.00 (Jun 25) → 111.20 (May 26) [rising trend]
+ *  USD/NGN  spot = 1365    → 12M P50 = 1339.45  (−2.2%)  vol = 29.58% VaR = 892.52 conf = 40%
+ *           history: 1520  (Jun-25) → 1365 (May-26)   smooth downward trend
+ *           forecast: very wide bands (P10=644, P90=2035), choppy P50 line
  *
- * Derivation (12M anchor → shorter horizons via √T scaling):
- *   sigma_12M  = VaR95 / 1.645
- *   sigma(T)   = sigma_12M × √T   (T in years: 0.25, 0.50, 1.00)
- *   P25(T)     = P50(T) − 0.675 × sigma(T)
- *   P75(T)     = P50(T) + 0.675 × sigma(T)
- *   P10(T)     = P50(T) − 1.282 × sigma(T)
- *   P90(T)     = P50(T) + 1.282 × sigma(T)
- *   P50(T)     = spot + (P50_12M − spot) × T  [linear drift interpolation]
+ *  EUR/INR  spot = 111.20  → 12M P50 = 111.55   (+0.3%)  vol = 6.82%  VaR = 13.18  conf = 81%
+ *           history: 94.00 (Jun-25) → peaks ~116-118 (Feb-Mar 26) → 111.20 (May-26)
+ *           arch-shaped trajectory (uses peakBump parameter)
  *
- * EUR/INR sigma derivation:
- *   sigma_12M = 13.18 / 1.645 = 8.012
- *   sigma_6M  = 8.012 × √0.50 = 5.664
- *   sigma_3M  = 8.012 × √0.25 = 4.006
+ * ── sigma derivations ──────────────────────────────────────────────────────────
  *
- * USD/INR sigma derivation:
- *   sigma_12M = 7.56 / 1.645 = 4.596
- *   sigma_6M  = 4.596 × √0.50 = 3.250
- *   sigma_3M  = 4.596 × √0.25 = 2.298
+ *  USD/INR  sigma_12M = 7.56 / 1.645 = 4.596
+ *           sigma_6M  = 4.596 × √0.50 = 3.250   sigma_3M = 4.596 × √0.25 = 2.298
  *
- * USD/NGN sigma derivation:
- *   sigma_12M = 892.52 / 1.645 = 542.57
- *   sigma_6M  = 542.57 × √0.50 = 383.60
- *   sigma_3M  = 542.57 × √0.25 = 271.29
+ *  USD/NGN  sigma_12M = 892.52 / 1.645 = 542.57
+ *           sigma_6M  = 542.57 × √0.50 = 383.60  sigma_3M = 542.57 × √0.25 = 271.29
+ *
+ *  EUR/INR  sigma_12M = 13.18 / 1.645 = 8.012
+ *           sigma_6M  = 8.012 × √0.50 = 5.664    sigma_3M = 8.012 × √0.25 = 4.006
+ *
+ *  Percentile formula:
+ *    P50(T) = spot + (P50_12M − spot) × T
+ *    P25(T) = P50(T) − 0.675 × sigma(T)
+ *    P75(T) = P50(T) + 0.675 × sigma(T)
+ *    P10(T) = P50(T) − 1.282 × sigma(T)
+ *    P90(T) = P50(T) + 1.282 × sigma(T)
  */
 
 import { strSeed } from '@/lib/format';
@@ -98,37 +96,59 @@ export interface FxEntry {
 const START_DATE = '2026-05-25';
 const N_SIMS     = 5000;
 
-// Historical lookback = forecast window (symmetric chart)
+// Business days per horizon (history window = forecast window = symmetric chart)
 const BDAYS: Record<Horizon, number> = { '3M': 63, '6M': 126, '12M': 252 };
 
-// Annualised vol used for history generation (smoothed to avoid overly jagged lines)
-// Independent of the displayed "Annualised Volatility" KPI.
-const HIST_VOL: Record<CurrencyPair, number> = {
-  INRUSD: 0.0433,  // matches INR display vol — gentle upward drift dominates
-  NGNUSD: 0.09,    // reduced from 29.58 % so history trend is legible (not too noisy)
-  EURINR: 0.0682,  // matches EUR/INR display vol — rising trend dominant
+// ── Per-pair visual calibration ────────────────────────────────────────────────
+//
+// HIST_NOISE: oscillation amplitude for the history line as a fraction of the
+//   current price level.  Higher = more noisy-looking history.
+//   Calibrated so each pair matches its reference screenshot.
+//
+// FORECAST_NOISE: same scale, for the forecast P50 path.
+//   NGN needs a high value because the reference shows a very choppy P50.
+//
+// PEAK_BUMP: extra height (in price units) added at the midpoint of the
+//   history as a smooth arch.  EUR/INR history peaks well above its endpoints.
+//   Other pairs use 0 (pure linear trend).
+
+const HIST_NOISE: Record<CurrencyPair, number> = {
+  INRUSD: 0.0075,  // tight oscillations ±~0.7% of price — matches INR screenshot
+  NGNUSD: 0.0090,  // smooth NGN history — small oscillations on a big downtrend
+  EURINR: 0.0240,  // visible oscillations ±~2.4% — matches EUR/INR noisy rise
 };
 
-// Noise amplitude in log-space for forecast P50 path generation.
-// Larger values produce a choppier Monte-Carlo forecast line (matching originals).
 const FORECAST_NOISE: Record<CurrencyPair, number> = {
-  INRUSD: 0.0010,  // smooth, slightly noisy — matches INR original
-  NGNUSD: 0.0035,  // choppy — matches NGN original (high-vol pair)
-  EURINR: 0.0008,  // smooth — matches EUR/INR original
+  INRUSD: 0.0030,  // moderately noisy forecast path
+  NGNUSD: 0.0380,  // very choppy P50 — matches NGN reference screenshot exactly
+  EURINR: 0.0080,  // mildly noisy forecast
+};
+
+// EUR/INR arch: history rises from ~94 to a peak of ~116-118, then settles at 111.20.
+// Per-horizon values scale the arch to match the visible portion of the peak.
+const PEAK_BUMP: Record<CurrencyPair, Record<Horizon, number>> = {
+  INRUSD: { '3M': 0, '6M': 0, '12M': 0 },
+  NGNUSD: { '3M': 0, '6M': 0, '12M': 0 },
+  EURINR: {
+    '3M':  3,   // 3M history (Feb-May 26) shows modest arch
+    '6M':  8,   // 6M history (Nov 25-May 26) shows clearer arch
+    '12M': 14,  // 12M history (Jun 25-May 26): full arch, peak reaches ~116-118
+  },
 };
 
 interface PairHorizonCfg {
   spot:      number;
-  histStart: number;  // approximate rate at the START of the history window
+  histStart: number;  // approximate rate at the START of the lookback window
   terminal:  Terminal;
-  annVolPct: number;  // shown in UI as "volatility" KPI
+  annVolPct: number;  // displayed in the Volatility KPI card
   confPct:   number;
 }
 
 // ── Pair × Horizon configuration ───────────────────────────────────────────────
 //
-// histStart values are the approximate spot at the beginning of each lookback
-// window (derived from the original screenshot trajectories):
+// histStart values are derived from the original reference screenshot trajectories.
+// Each represents the approximate rate at the beginning of the corresponding
+// lookback window (12M/6M/3M before May 26, 2026):
 //
 //   USD/INR  12M ago ≈ 84.00   6M ago ≈ 90.00   3M ago ≈ 93.00
 //   USD/NGN  12M ago ≈ 1520    6M ago ≈ 1443     3M ago ≈ 1404
@@ -137,8 +157,8 @@ interface PairHorizonCfg {
 const PAIR_CFG: Record<CurrencyPair, Record<Horizon, PairHorizonCfg>> = {
 
   // ── USD/INR ──────────────────────────────────────────────────────────────────
-  //  spot = 95.90,  12M P50 = 101.23  (+5.7 %)
-  //  sigma_12M = 7.56 / 1.645 = 4.596
+  //  Steady upward trend in history; tight confidence bands in forecast.
+  //  sigma_12M = 4.596 → P10/P90 spread = 2×1.282×4.596 = 11.78
   INRUSD: {
     '3M': {
       spot:      95.90,
@@ -164,7 +184,7 @@ const PAIR_CFG: Record<CurrencyPair, Record<Horizon, PairHorizonCfg>> = {
   },
 
   // ── USD/NGN ──────────────────────────────────────────────────────────────────
-  //  spot = 1365,   12M P50 = 1339.45  (−2.2 %)
+  //  Smooth declining history; extremely wide forecast bands; choppy P50.
   //  sigma_12M = 892.52 / 1.645 = 542.57
   NGNUSD: {
     '3M': {
@@ -191,28 +211,12 @@ const PAIR_CFG: Record<CurrencyPair, Record<Horizon, PairHorizonCfg>> = {
   },
 
   // ── EUR/INR ──────────────────────────────────────────────────────────────────
-  //  spot = 111.20,  12M P50 = 111.55  (+0.3 %)
+  //  Arch-shaped history (rises to a peak ~116-118 before settling at 111.20).
   //  sigma_12M = 13.18 / 1.645 = 8.012
-  //  sigma_6M  = 8.012 × √0.50 = 5.664
-  //  sigma_3M  = 8.012 × √0.25 = 4.006
   //
-  //  12M terminals:
-  //    P25 = 111.55 − 0.675 × 8.012 = 106.14
-  //    P75 = 111.55 + 0.675 × 8.012 = 116.96
-  //    P10 = 111.55 − 1.282 × 8.012 = 101.28
-  //    P90 = 111.55 + 1.282 × 8.012 = 121.82
-  //
-  //  6M P50 = 111.20 + (111.55 − 111.20) × 0.50 = 111.38
-  //    P25 = 111.38 − 0.675 × 5.664 = 107.56
-  //    P75 = 111.38 + 0.675 × 5.664 = 115.20
-  //    P10 = 111.38 − 1.282 × 5.664 = 104.12
-  //    P90 = 111.38 + 1.282 × 5.664 = 118.64
-  //
-  //  3M P50 = 111.20 + (111.55 − 111.20) × 0.25 = 111.29
-  //    P25 = 111.29 − 0.675 × 4.006 = 108.58
-  //    P75 = 111.29 + 0.675 × 4.006 = 113.99
-  //    P10 = 111.29 − 1.282 × 4.006 = 106.15
-  //    P90 = 111.29 + 1.282 × 4.006 = 116.43
+  //  12M: P50=111.55  P25=106.14  P75=116.96  P10=101.28  P90=121.82
+  //  6M:  P50=111.38  P25=107.56  P75=115.20  P10=104.12  P90=118.64
+  //  3M:  P50=111.29  P25=108.58  P75=113.99  P10=106.15  P90=116.43
   EURINR: {
     '3M': {
       spot:      111.20,
@@ -248,14 +252,18 @@ function buildEntry(pair: CurrencyPair, horizon: Horizon): FxEntry {
   const bandSeed = histSeed ^ 0xDEAD;
   const distSeed = histSeed ^ 0xBEEF;
 
-  // Historical segment — drifted GBM from histStart → spot
-  const histRaw  = genHistoryDrifted(
+  // ── Historical segment ─────────────────────────────────────────────────────
+  // Deterministic drifted trajectory from histStart → spot, with sine-wave
+  // oscillation noise and optional arch peak (EUR/INR only).
+  const histRaw = genHistoryDrifted(
     START_DATE, spot, histStart, nBdays,
-    HIST_VOL[pair], histSeed,
+    HIST_NOISE[pair], histSeed,
+    PEAK_BUMP[pair][horizon],
   );
   const histData: ChartPoint[] = histRaw.map(pt => ({ date: pt.date, actual: pt.actual }));
 
-  // Forecast fan-band segment — pair-calibrated MC noise
+  // ── Forecast fan-band segment ──────────────────────────────────────────────
+  // Deterministic P50 path drifting from spot → terminal.p50; bands widen √t.
   const fcastDates   = genBusinessDays(START_DATE, nBdays);
   const bands        = genFanBands(fcastDates, spot, terminal, bandSeed, FORECAST_NOISE[pair]);
   const forecastData: ChartPoint[] = bands.map(b => ({
@@ -277,7 +285,7 @@ function buildEntry(pair: CurrencyPair, horizon: Horizon): FxEntry {
   const percentileValues: PercentileValues = { ...terminal };
   const baseRateRange = { low: terminal.p25, high: terminal.p75 };
 
-  // KPI metrics
+  // ── KPI metrics ────────────────────────────────────────────────────────────
   const pctDelta = ((terminal.p50 - spot) / spot) * 100;
 
   const projectedDelta =
@@ -290,7 +298,6 @@ function buildEntry(pair: CurrencyPair, horizon: Horizon): FxEntry {
     pctDelta >  1 ? 'negative' :
     'neutral';
 
-  // VaR 95 %: 1.645 × σ from terminal P50
   const var95Raw = 1.645 * sigma;
 
   const confSignal: StatSignal =

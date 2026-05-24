@@ -1,29 +1,49 @@
 /**
- * Precomputed SOFR Monte Carlo forecast data.
- * Replaces live /api/v1/forecast/sofr/monte-carlo calls.
+ * Precomputed SOFR forecast data — fully deterministic, no random generation.
  *
- * Calibration reference (2026-05-24) — visually matched to original screenshot:
+ * Visual trajectories are calibrated to match the original reference screenshot.
+ * All "noise" is produced by deterministic sine-wave harmonics in dataUtils.ts.
  *
- *   Spot rate     : 3.51 %   (SOFR as of May 26, 2026 — after Fed cuts)
- *   12M terminal  : 4.15 %   (+64 bps from spot — mean reversion upward)
- *   History       : ~4.40 % (Jun 25) → 3.51 % (May 26)   [declining trend]
- *   Implied Vol   : 20 bps   (ARIMA residual dispersion label)
+ * ── Calibration reference (2026-05-24) ────────────────────────────────────────
+ *
+ *   Spot rate     : 3.51 %   (SOFR after Fed easing cycle, as of May 26 2026)
+ *   12M terminal  : 4.15 %   (+64 bps — mean reversion upward)
+ *   History shape : ~4.40 % (Jun-25) → declining with noise → 3.51 % (May-26)
+ *                   Stepped, noisy decline (consistent with rate-cut environment)
+ *   Forecast shape: 3.51 % → rising choppy path → 4.15 % at 12M
+ *   Implied Vol   : 20 bps   (ARIMA 1-step residual label, shown in UI)
  *   Prob Range    : 205 bps  (12M IQR = P75 − P25)
  *   Confidence    : 53 %     (12M)
  *
- * sigma derivation from IQR:
- *   IQR  = P75 − P25 = 2 × 0.675 × sigma   →  205 bps = 1.35 × sigma
- *   sigma_12M = 2.05 / 1.35 = 1.519 %
+ * ── sigma derivation ──────────────────────────────────────────────────────────
  *
- * Shorter horizons — sigma(T) = sigma_12M × √T, P50(T) linear interpolation:
- *   3M  (T=0.25): sigma = 1.519 × 0.500 = 0.760   P50 = 3.51 + 0.64 × 0.25 = 3.67
- *   6M  (T=0.50): sigma = 1.519 × 0.707 = 1.074   P50 = 3.51 + 0.64 × 0.50 = 3.83
- *   12M (T=1.00): sigma = 1.519               P50 = 4.15
+ *   IQR = P75 − P25 = 205 bps = 2.05 %
+ *   2.05 = 2 × 0.675 × sigma_12M  →  sigma_12M = 1.519 %
  *
- * Historical start values (interpolated along the Jun 25 → May 26 decline):
- *   12M ago (Jun 25): 4.40 %
- *    6M ago (Nov 25): 3.96 %
- *    3M ago (Feb 26): 3.73 %
+ *   sigma(T) = sigma_12M × √T:
+ *     3M  (T=0.25): sigma = 1.519 × 0.500 = 0.760
+ *     6M  (T=0.50): sigma = 1.519 × 0.707 = 1.074
+ *     12M (T=1.00): sigma = 1.519
+ *
+ *   P50(T) = spot + (4.15 − 3.51) × T:
+ *     3M P50 = 3.51 + 0.64 × 0.25 = 3.67
+ *     6M P50 = 3.51 + 0.64 × 0.50 = 3.83
+ *    12M P50 = 4.15
+ *
+ *   12M: P10 = 4.15 − 1.282×1.519 = 2.20   P90 = 4.15 + 1.282×1.519 = 6.10
+ *        P25 = 4.15 − 0.675×1.519 = 3.13   P75 = 4.15 + 0.675×1.519 = 5.18
+ *
+ *    6M: P10 = 3.83 − 1.282×1.074 = 2.45   P90 = 3.83 + 1.282×1.074 = 5.21
+ *        P25 = 3.83 − 0.675×1.074 = 3.11   P75 = 3.83 + 0.675×1.074 = 4.56
+ *
+ *    3M: P10 = 3.67 − 1.282×0.760 = 2.70   P90 = 3.67 + 1.282×0.760 = 4.64
+ *        P25 = 3.67 − 0.675×0.760 = 3.16   P75 = 3.67 + 0.675×0.760 = 4.18
+ *
+ * ── Historical start values ────────────────────────────────────────────────────
+ *   Interpolated from the Jun-25 → May-26 declining trajectory:
+ *     12M ago (Jun-25) : 4.40 %
+ *      6M ago (Nov-25) : 3.96 %   (= 4.40 − 0.89 × 0.5)
+ *      3M ago (Feb-26) : 3.73 %   (= 4.40 − 0.89 × 0.75)
  */
 
 import { strSeed } from '@/lib/format';
@@ -82,52 +102,32 @@ export interface SofrEntry {
 
 // ── Model parameters ───────────────────────────────────────────────────────────
 
-/**
- * Last observed SOFR rate — chart split point / history anchor.
- * As of May 26 2026 SOFR is 3.51 % after Fed easing cycle.
- * The 12M forecast (4.15 %) represents +64 bps mean reversion.
- */
+/** Current SOFR rate — chart split point and history endpoint. */
 const SPOT       = 3.51;
 const START_DATE = '2026-05-25';
 const N_SIMS     = 5000;
 
-// Historical window matches forecast window (symmetric chart)
+// Historical window = forecast window (symmetric chart layout)
 const BDAYS: Record<Horizon, number> = { '3M': 63, '6M': 126, '12M': 252 };
 
-/**
- * Annualised vol used for history generation.
- * Using ~8 % gives a visually smooth declining history path
- * (the ARIMA residual label "20 bps" is a 1-step forecast error, not the
- * rolling historical vol driving the path generator).
- */
-const HIST_VOL   = 0.08;
+// ── Visual calibration ─────────────────────────────────────────────────────────
+//
+// HIST_NOISE: oscillation amplitude for history as fraction of rate level.
+//   The reference screenshot shows a noisy, stepped decline.
+//   At 4.0 %, noiseAmp 0.025 gives oscillations of ±0.10 % points.
+//
+// FORECAST_NOISE: same scale for the forecast P50 path.
+//   The reference screenshot shows a distinctly noisy/choppy rising mean.
 
-/**
- * Forecast P50 path noise amplitude in log-space.
- * Higher value → choppier MC mean path (matches SOFR original screenshot).
- */
-const FORECAST_NOISE = 0.0028;
+const HIST_NOISE     = 0.025;  // ±~0.10 % at SOFR ~4 %  — stepped noisy decline
+const FORECAST_NOISE = 0.020;  // ±~0.07 % at SOFR ~3.7 % — choppy rising forecast
 
 interface HorizonCfg {
-  histStart: number;  // approximate SOFR at the start of the lookback window
+  histStart: number;  // SOFR rate at the start of the lookback window
   terminal:  Terminal;
-  annVolPct: number;  // shown in UI as "volatility" metric label
+  annVolPct: number;  // displayed in the UI "Implied Volatility" card
   confPct:   number;
 }
-
-// ── Horizon configurations ─────────────────────────────────────────────────────
-//
-// 12M terminals (sigma_12M = 1.519):
-//   P10 = 4.15 − 1.282 × 1.519 = 2.203   P90 = 4.15 + 1.282 × 1.519 = 6.097
-//   P25 = 4.15 − 0.675 × 1.519 = 3.125   P75 = 4.15 + 0.675 × 1.519 = 5.175
-//
-// 6M terminals (sigma_6M = 1.074):
-//   P10 = 3.83 − 1.282 × 1.074 = 2.454   P90 = 3.83 + 1.282 × 1.074 = 5.207
-//   P25 = 3.83 − 0.675 × 1.074 = 3.105   P75 = 3.83 + 0.675 × 1.074 = 4.555
-//
-// 3M terminals (sigma_3M = 0.760):
-//   P10 = 3.67 − 1.282 × 0.760 = 2.695   P90 = 3.67 + 1.282 × 0.760 = 4.644
-//   P25 = 3.67 − 0.675 × 0.760 = 3.157   P75 = 3.67 + 0.675 × 0.760 = 4.183
 
 const CFG: Record<Horizon, HorizonCfg> = {
   '3M': {
@@ -160,14 +160,19 @@ function buildEntry(horizon: Horizon): SofrEntry {
   const bandSeed = histSeed ^ 0xDEAD;
   const distSeed = histSeed ^ 0xBEEF;
 
-  // Historical segment — drifted GBM from histStart → SPOT
-  const histRaw  = genHistoryDrifted(
+  // ── Historical segment ─────────────────────────────────────────────────────
+  // Deterministic declining trajectory from histStart → SPOT with sine-wave
+  // oscillation (no peakBump — SOFR declines monotonically in the reference).
+  const histRaw = genHistoryDrifted(
     START_DATE, SPOT, histStart, nBdays,
-    HIST_VOL, histSeed,
+    HIST_NOISE, histSeed,
+    0, // no arch peak for SOFR
   );
   const histData: ChartPoint[] = histRaw.map(pt => ({ date: pt.date, actual: pt.actual }));
 
-  // Forecast fan-band segment — SOFR mean-reverts upward from SPOT → terminal.p50
+  // ── Forecast fan-band segment ──────────────────────────────────────────────
+  // SOFR rises from SPOT (3.51 %) toward terminal P50 (4.15 %) with a
+  // choppy deterministic path; bands widen as √t.
   const fcastDates   = genBusinessDays(START_DATE, nBdays);
   const bands        = genFanBands(fcastDates, SPOT, terminal, bandSeed, FORECAST_NOISE);
   const forecastData: ChartPoint[] = bands.map(b => ({
@@ -189,7 +194,7 @@ function buildEntry(horizon: Horizon): SofrEntry {
   const percentileValues: PercentileValues = { ...terminal };
   const baseRateRange = { low: terminal.p25, high: terminal.p75 };
 
-  // KPI metrics
+  // ── KPI metrics ────────────────────────────────────────────────────────────
   const delta_bps = Math.round((terminal.p50 - SPOT) * 100);
 
   const projectedDelta =
@@ -197,7 +202,7 @@ function buildEntry(horizon: Horizon): SofrEntry {
     delta_bps  > 0  ? `+${delta_bps} bps` :
                       `${delta_bps} bps`;
 
-  // Rising SOFR means tighter monetary conditions → 'negative' signal
+  // Rising SOFR = tighter conditions → negative signal for borrowers
   const projectedSignal: StatSignal =
     delta_bps < -5 ? 'positive' :
     delta_bps >  5 ? 'negative' :

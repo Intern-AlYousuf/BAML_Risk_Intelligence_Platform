@@ -1,6 +1,16 @@
 /**
  * Pure data-generation utilities for precomputed forecast data.
- * No React, no async — safe to run at module load time.
+ *
+ * ALL functions are fully deterministic — there are NO random number generators.
+ * Visual variation (oscillations that look like real market data) is produced by
+ * summing four sine-wave harmonics with different periods and phases.
+ * The `seed` parameter maps to a phase offset in [0, 2π], making every
+ * pair/horizon unique without any randomness.
+ *
+ * This guarantees:
+ *  - Zero hydration mismatch between SSR and client
+ *  - Identical output on every render / build / browser
+ *  - Visually natural trajectories that match the calibration screenshots
  */
 
 // ── Date helpers ───────────────────────────────────────────────────────────────
@@ -26,7 +36,7 @@ export function genMonthlyTicks(dates: string[]): string[] {
   const seen = new Set<string>();
   const ticks: string[] = [];
   for (const d of dates) {
-    const ym = d.slice(0, 7); // "YYYY-MM"
+    const ym = d.slice(0, 7);
     if (!seen.has(ym)) { seen.add(ym); ticks.push(d); }
   }
   const last = dates[dates.length - 1];
@@ -34,22 +44,35 @@ export function genMonthlyTicks(dates: string[]): string[] {
   return ticks;
 }
 
-// ── Seeded random ─────────────────────────────────────────────────────────────
+// ── Deterministic oscillation engine ─────────────────────────────────────────
+//
+// Four sine harmonics combine to produce a waveform that looks like realistic
+// financial-market noise without any randomness.
+//
+//  Primary    period × 1.00  (long cycle  ~6-7 weeks for business-day data)
+//  Secondary  period × 0.52  (medium      ~3.3 weeks)
+//  Tertiary   period × 0.27  (short       ~1.7 weeks)
+//  Quaternary period × 0.12  (micro       ~4 trading days — subtle texture)
+//
+// Amplitude weights sum to 1.00 so the output sits in roughly [−0.90, +0.90].
 
-/** Linear Congruential Generator — deterministic, no hydration drift. */
-function mkRng(seed: number): () => number {
-  let s = (seed >>> 0) || 1;
-  return () => {
-    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-    return s / 0x100000000;
-  };
+function osc(i: number, period: number, phase: number): number {
+  const τ = 2 * Math.PI;
+  return (
+    0.40 * Math.sin(τ * i / (period)          + phase        ) +
+    0.30 * Math.sin(τ * i / (period * 0.52)   + phase * 1.73 ) +
+    0.20 * Math.sin(τ * i / (period * 0.27)   + phase * 2.61 ) +
+    0.10 * Math.sin(τ * i / (period * 0.12)   + phase * 0.89 )
+  );
 }
 
-/** Box-Muller transform — standard normal sample from two uniform samples. */
-function stdNormal(rng: () => number): number {
-  const u1 = Math.max(rng(), 1e-12);
-  const u2 = rng();
-  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+/**
+ * Convert an integer seed → unique phase in [0, 2π].
+ * Different pair/horizon seeds produce visually distinct waveforms.
+ * Pure arithmetic — no randomness.
+ */
+function seedPhase(seed: number): number {
+  return ((seed >>> 0) % 997) / 997 * 2 * Math.PI;
 }
 
 // ── Drifted history generator ─────────────────────────────────────────────────
@@ -57,33 +80,33 @@ function stdNormal(rng: () => number): number {
 export interface ChartHistoryPoint { date: string; actual: number }
 
 /**
- * Generate synthetic historical data with a deterministic log-GBM drift.
- *
- * Produces N business days of history ending at `spot` on `splitDate`, with
- * the path starting near `histStart`.  A log-GBM forward walk with the
- * implied daily drift is used so the chart shows a trending trajectory that
- * matches the original calibration screenshots (e.g. INR rising from 84 to
- * 95.90, EUR/INR rising from 94 to 111.20, NGN declining from 1520 to 1365,
- * SOFR declining from 4.40 % to 3.51 %).
+ * Generate a deterministic synthetic history that trends from `histStart`
+ * to `spot` over `nBdays` business days, with a natural-looking oscillation
+ * overlay calibrated per pair.
  *
  * @param splitDate  ISO "YYYY-MM-DD" — chart split point (history ends here)
- * @param spot       Rate at splitDate (history endpoint, pinned exactly)
+ * @param spot       Rate at splitDate (endpoint, pinned exactly)
  * @param histStart  Approximate rate at the start of the history window
- * @param nBdays     Number of business days of history to generate
- * @param annVol     Annualised volatility in decimal (e.g. 0.06 = 6 %)
- * @param seed       Deterministic LCG seed for reproducibility
+ * @param nBdays     Number of business days to generate
+ * @param noiseAmp   Oscillation amplitude as a fraction of the current price
+ *                   (e.g. 0.008 = peaks at ±0.8 % of price). Controls how
+ *                   "noisy" the historical line looks.
+ * @param seed       Maps to a sine-wave phase offset — different pairs/horizons
+ *                   get different waveform shapes (deterministic, not random)
+ * @param peakBump   Optional extra height added at the midpoint as a smooth
+ *                   arch (sin π·t).  Use for EUR/INR whose history peaks well
+ *                   above both endpoints before settling at spot.
  */
 export function genHistoryDrifted(
   splitDate: string,
   spot:      number,
   histStart: number,
   nBdays:    number,
-  annVol:    number,
+  noiseAmp:  number,
   seed:      number,
+  peakBump:  number = 0,
 ): ChartHistoryPoint[] {
   if (!splitDate || spot <= 0 || histStart <= 0 || nBdays <= 0) return [];
-
-  const rng = mkRng(seed);
 
   // Build list of N business days ending one day before splitDate
   const dates: string[] = [];
@@ -95,26 +118,30 @@ export function genHistoryDrifted(
   }
   dates.reverse(); // oldest → newest
 
-  const vol      = Math.min(Math.max(annVol, 0.005), 0.6);
-  const dailyVol = vol / Math.sqrt(252);
-  // Log-space drift per day so that the path goes from histStart → spot
-  const logDrift = (Math.log(spot) - Math.log(histStart)) / nBdays;
+  const phase  = seedPhase(seed);
+  const period = 32; // primary oscillation period (≈ 6.5 weeks of trading days)
 
-  const logLevels: number[] = new Array(nBdays);
-  logLevels[0] = Math.log(histStart);
-  for (let i = 1; i < nBdays - 1; i++) {
-    logLevels[i] = logLevels[i - 1] + logDrift + dailyVol * stdNormal(rng);
-  }
-  // Pin the last history point exactly to spot for a seamless chart join
-  logLevels[nBdays - 1] = Math.log(spot);
+  return dates.map((date, i) => {
+    const t = i / Math.max(nBdays - 1, 1);
 
-  return dates.map((date, i) => ({
-    date,
-    actual: Math.max(parseFloat(Math.exp(logLevels[i]).toFixed(4)), 0.0001),
-  }));
+    // Trend: linear interpolation from histStart → spot, plus optional arch
+    const linear  = histStart + (spot - histStart) * t;
+    const arch    = peakBump * Math.sin(Math.PI * t);
+    const trend   = linear + arch;
+
+    // Deterministic oscillation noise — amplitude proportional to current price
+    const noise = noiseAmp * Math.abs(trend) * osc(i, period, phase);
+
+    // Pin the final point exactly to spot (seamless join with forecast)
+    const val = i === nBdays - 1
+      ? spot
+      : Math.max(trend + noise, 0.0001);
+
+    return { date, actual: parseFloat(val.toFixed(4)) };
+  });
 }
 
-// ── Fan-band generator ────────────────────────────────────────────────────────
+// ── Fan-band forecast generator ───────────────────────────────────────────────
 
 export interface Terminal {
   p10: number;
@@ -134,45 +161,48 @@ export interface FanPoint {
 }
 
 /**
- * Generate a fan-band forecast series over `dates`.
+ * Generate a deterministic forecast fan-band series.
  *
- * - The P50 path follows a log-GBM drift from `spot` → `terminal.p50`
- *   with per-pair calibrated noise (`noiseSig`).
- * - Uncertainty bands widen as √(t/T), reaching the terminal percentiles
- *   at the last date.  This matches qualitative MC output behaviour.
+ * The P50 forecast path drifts from `spot` toward `terminal.p50` with a
+ * calibrated deterministic oscillation overlay (noiseSig).  The uncertainty
+ * bands widen as √(t/T), reaching the full terminal percentile spread at
+ * the last date — exactly matching standard Monte-Carlo output behaviour.
  *
- * @param noiseSig  Daily log-return noise amplitude (default 0.0008).
- *                  Increase for volatile pairs (NGN, SOFR) to reproduce
- *                  the choppier MC forecast paths visible in the originals.
+ * @param noiseSig  Oscillation amplitude for the forecast median path as a
+ *                  fraction of the current price.  Higher values give a
+ *                  choppier mean line (e.g. NGN needs ~0.038, INR ~0.003).
  */
 export function genFanBands(
   dates:    string[],
   spot:     number,
   terminal: Terminal,
   seed:     number,
-  noiseSig: number = 0.0008,
+  noiseSig: number = 0.004,
 ): FanPoint[] {
-  const rng = mkRng(seed);
-  const n   = dates.length;
+  const n = dates.length;
   if (n === 0) return [];
 
-  // Drift so that E[logVal at n] = log(terminal.p50)
-  const logDrift = (Math.log(terminal.p50) - Math.log(spot)) / n;
-  let   logVal   = Math.log(spot);
+  // Use a phase offset shifted from the history so forecast looks distinct
+  const phase  = seedPhase(seed) + 1.57; // +π/2 → orthogonal waveform
+  const period = 24; // slightly shorter primary period for forecast section
 
   return dates.map((date, i) => {
-    logVal += logDrift + stdNormal(rng) * noiseSig;
-    const mid = Math.exp(logVal);
-    const t   = Math.sqrt((i + 1) / n); // √(t/T): 0 → 1
+    const t_lin  = i / Math.max(n - 1, 1);    // linear progress 0 → 1
+    const t_sqrt = Math.sqrt((i + 1) / n);     // √t progress 0 → 1 (band widening)
 
-    // Band offsets relative to terminal.p50, scaled by √t
+    // P50 path: linear drift + deterministic noise
+    const drift  = spot + (terminal.p50 - spot) * t_lin;
+    const noise  = noiseSig * Math.abs(drift) * osc(i, period, phase);
+    const mid    = Math.max(drift + noise, 0.0001);
+
+    // Percentile bands: offset from mid, widening as √t
     return {
       date,
       forecast: +mid.toFixed(4),
-      p25:      +(mid + (terminal.p25 - terminal.p50) * t).toFixed(4),
-      p75:      +(mid + (terminal.p75 - terminal.p50) * t).toFixed(4),
-      p10:      +(mid + (terminal.p10 - terminal.p50) * t).toFixed(4),
-      p90:      +(mid + (terminal.p90 - terminal.p50) * t).toFixed(4),
+      p25:      +(mid + (terminal.p25 - terminal.p50) * t_sqrt).toFixed(4),
+      p75:      +(mid + (terminal.p75 - terminal.p50) * t_sqrt).toFixed(4),
+      p10:      +(mid + (terminal.p10 - terminal.p50) * t_sqrt).toFixed(4),
+      p90:      +(mid + (terminal.p90 - terminal.p50) * t_sqrt).toFixed(4),
     };
   });
 }
@@ -186,12 +216,13 @@ export interface DistributionPoint {
 
 /**
  * Build a histogram approximating a normal distribution.
+ * Tiny deterministic visual texture is added via sine wave (no randomness).
  *
  * @param center  Terminal P50 (bin centre)
  * @param sigma   Standard deviation in rate units
  * @param nBins   Number of histogram bins
  * @param dp      Decimal places for bin label strings
- * @param seed    Reproducible seed for tiny visual noise
+ * @param seed    Phase seed for visual texture (deterministic)
  */
 export function genDistribution(
   center: number,
@@ -200,10 +231,10 @@ export function genDistribution(
   dp:     number,
   seed:   number,
 ): DistributionPoint[] {
-  const rng = mkRng(seed);
-  const lo  = center - 3.6 * sigma;
-  const hi  = center + 3.6 * sigma;
-  const bw  = (hi - lo) / nBins;
+  const phase = seedPhase(seed);
+  const lo    = center - 3.6 * sigma;
+  const hi    = center + 3.6 * sigma;
+  const bw    = (hi - lo) / nBins;
 
   let total = 0;
   const raw: { rate: string; w: number }[] = [];
@@ -211,12 +242,12 @@ export function genDistribution(
   for (let i = 0; i < nBins; i++) {
     const x = lo + (i + 0.5) * bw;
     const z = (x - center) / sigma;
-    // Normal PDF × tiny LCG noise for visual texture
-    const w = Math.exp(-0.5 * z * z) * (1 + (rng() - 0.5) * 0.04);
+    // Normal PDF with deterministic texture (replaces RNG noise)
+    const texture = 1 + Math.sin(i * 2.31 + phase) * 0.02;
+    const w = Math.exp(-0.5 * z * z) * texture;
     raw.push({ rate: x.toFixed(dp), w });
     total += w;
   }
 
-  // Normalise to sum ≈ 100 (matches the `prob * 100` convention in transform())
   return raw.map(b => ({ rate: b.rate, prob: +(b.w / total * 100).toFixed(3) }));
 }
