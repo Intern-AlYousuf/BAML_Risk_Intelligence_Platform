@@ -128,6 +128,10 @@ def _register_routers(app: FastAPI) -> None:
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 
+@app.get("/healthz")
+def health_check():
+    return {"status": "ok"}
+
 # ── Module-level app instance (used by uvicorn / gunicorn) ───────────────────
 
 app = create_app()
