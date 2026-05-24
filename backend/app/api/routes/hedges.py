@@ -93,7 +93,7 @@ async def update_hedge(
 @router.delete(
     "/{hedge_id}",
     status_code=status.HTTP_200_OK,
-    summary="Delete a hedge configuration",
+    summary="Delete a hedge configuration",     
     responses={
         status.HTTP_200_OK: {"description": "Hedge deleted"},
         status.HTTP_404_NOT_FOUND: {"description": "Hedge not found"},
