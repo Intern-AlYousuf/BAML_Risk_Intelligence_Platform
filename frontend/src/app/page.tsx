@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useMounted } from '../hooks/useMounted';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { ChevronRight, ArrowRight, Cpu, Globe2, Shield } from 'lucide-react';
@@ -32,6 +33,9 @@ function MiniSparkline({ data, uid }: { data: ForecastPoint[]; uid: string }) {
   const step    = Math.max(1, Math.floor(data.length / 50));
   const sampled = data.filter((_, i) => i % step === 0);
   const gid     = `sg-${uid}`;
+  const mounted = useMounted();
+
+  if (!mounted) return <div style={{ height: 56 }} />;
 
   return (
     <ResponsiveContainer width="100%" height={56}>
@@ -432,6 +436,9 @@ export default function DashboardPage() {
     return out;
   }, [sofrM, inrM, ngnM, ironOreDelta]);
 
+  /* ── SSR guard ───────────────────────────────────────────────────────────── */
+  const mounted = useMounted();
+
   /* ── Helpers ─────────────────────────────────────────────────────────────── */
   const anyLoading = sofrLoading || inrLoading;
   const today      = new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -562,7 +569,7 @@ export default function DashboardPage() {
                 height={480}
                 loading={sofrLoading && !sofrM}
               >
-                <ResponsiveContainer width="100%" height="100%">
+                {mounted && <ResponsiveContainer width="100%" height="100%">
                   <RadarChart
                     data={radarData}
                     outerRadius="80%"
@@ -596,7 +603,7 @@ export default function DashboardPage() {
                       animationEasing="ease-out"
                     />
                   </RadarChart>
-                </ResponsiveContainer>
+                </ResponsiveContainer>}
               </ChartCard>
 
               <InterpretationPanel insights={insights} />

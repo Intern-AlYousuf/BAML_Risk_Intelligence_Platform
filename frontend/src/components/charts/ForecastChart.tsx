@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useId, useMemo } from 'react';
+import { useMounted } from '../../hooks/useMounted';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -299,6 +300,7 @@ export function ForecastChart({
   const idOuter = `fo-${uid}`;
   const idInner = `fi-${uid}`;
   const fmt     = assetType === 'fx' ? formatFxRate : formatPercent;
+  const mounted = useMounted();
 
   // ── Build wiggly rendering path ─────────────────────────────────────────
   // Memoised: only recomputes when the underlying data array changes.
@@ -311,7 +313,7 @@ export function ForecastChart({
 
   return (
     <div className={cn('w-full h-full', className)}>
-      <ResponsiveContainer width="100%" height={height}>
+      {mounted && <ResponsiveContainer width="100%" height={height}>
         <AreaChart
           data={renderedData}
           margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
@@ -464,7 +466,7 @@ export function ForecastChart({
             />
           )}
         </AreaChart>
-      </ResponsiveContainer>
+      </ResponsiveContainer>}
     </div>
   );
 }

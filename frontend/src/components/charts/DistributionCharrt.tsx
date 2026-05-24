@@ -11,6 +11,7 @@ import {
   Cell,
 } from 'recharts';
 import { cn } from '../../lib/theme';
+import { useMounted } from '../../hooks/useMounted';
 
 /* ---------------------------------------------------------------------------
    Data types
@@ -80,6 +81,8 @@ export function DistributionChart({
   height    = 300,
   className,
 }: DistributionChartProps) {
+  const mounted = useMounted();
+
   if (!data.length) return null;
 
   const maxProb = Math.max(...data.map(d => d.prob));
@@ -98,7 +101,7 @@ export function DistributionChart({
 
   return (
     <div className={cn('w-full h-full', className)}>
-      <ResponsiveContainer width="100%" height={height}>
+      {mounted && <ResponsiveContainer width="100%" height={height}>
         <BarChart
           data={data}
           barCategoryGap="14%"
@@ -140,7 +143,7 @@ export function DistributionChart({
             ))}
           </Bar>
         </BarChart>
-      </ResponsiveContainer>
+      </ResponsiveContainer>}
     </div>
   );
 }

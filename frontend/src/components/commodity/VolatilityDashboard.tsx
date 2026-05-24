@@ -18,6 +18,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useMounted } from '../../hooks/useMounted';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -562,6 +563,7 @@ export function VolatilityDashboard({ commodityId }: { commodityId: CommodityId 
   const [garchResult, setGarch]     = useState<GarchResult | null>(null);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState<string | null>(null);
+  const mounted = useMounted();
 
   /* ── Load CSV (cached after first mount) ── */
   useEffect(() => {
@@ -898,7 +900,7 @@ export function VolatilityDashboard({ commodityId }: { commodityId: CommodityId 
           </div>
 
           {/* ── Recharts ComposedChart ── */}
-          <ResponsiveContainer width="100%" height={400}>
+          {mounted && <ResponsiveContainer width="100%" height={400}>
             <ComposedChart data={chartData} margin={{ top: 6, right: 52, bottom: 6, left: 4 }}>
               {/* Axes */}
               <XAxis
@@ -1105,7 +1107,7 @@ export function VolatilityDashboard({ commodityId }: { commodityId: CommodityId 
                 }}
               />
             </ComposedChart>
-          </ResponsiveContainer>
+          </ResponsiveContainer>}
 
           {/* Chart footer */}
           <p style={{ fontSize: '10.5px', marginTop: '10px', color: '#BBBBBB' }}>
